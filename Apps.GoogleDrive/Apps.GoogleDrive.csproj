@@ -1,15 +1,17 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<Product>Blackbird Google Drive</Product>
-	<Version>1.0.0</Version>
+	<Description>Blackbird Google Drive</Description>
+	<Version>1.0.4</Version>
+	<AssemblyName>Apps.GoogleDrive</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha3" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.2.0-alpha4" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.60.0.2986" />
     <PackageReference Include="Google.Apis.DriveActivity.v2" Version="1.61.0.3106" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
