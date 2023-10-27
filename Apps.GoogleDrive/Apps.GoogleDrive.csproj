@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
 	<Product>Google Drive</Product>
 	<Description>File storage and synchronization service.</Description>
-	<Version>1.0.8</Version>
+	<Version>1.0.9</Version>
 	<AssemblyName>Apps.GoogleDrive</AssemblyName>
   </PropertyGroup>
 
