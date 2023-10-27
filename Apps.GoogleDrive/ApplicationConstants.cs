@@ -12,8 +12,6 @@ namespace Apps.GoogleDrive
 
         public const string ClientSecret = "#{GOOGLEDRIVE_CLIENT_SECRET}#";
 
-        public const string RedirectUri = "#{GOOGLEDRIVE_REDIRECT_URI}#";
-
         public const string Scope = "#{GOOGLEDRIVE_SCOPE}#";
     }
 }
