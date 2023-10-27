@@ -5,8 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<Product>Google Drive</Product>
-	<Description>Blackbird Google Drive</Description>
-	<Version>1.0.5</Version>
+	<Description>Google Drive</Description>
+	<Version>1.0.6</Version>
 	<AssemblyName>Apps.GoogleDrive</AssemblyName>
   </PropertyGroup>
 
@@ -16,5 +16,9 @@
     <PackageReference Include="Google.Apis.DriveActivity.v2" Version="1.61.0.3106" />
     <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
   </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png"/>
+    </ItemGroup>
 
 </Project>
