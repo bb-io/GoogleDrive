@@ -9,12 +9,12 @@ namespace Apps.GoogleDrive.Webhooks;
 public class WebhookList
 {
     [Webhook("On folder content added", typeof(FolderContentAddedHandler), Description = "On folder content added")]
-    public async Task<WebhookResponse<FolderContentChangedPayload>> FolderContentAdded(WebhookRequest webhookRequest)
+    public async Task<WebhookResponse<FolderContentChangedPayload>> FolderContentAdded(WebhookRequest webhookRequest) // This output value is not great and contains useless information
     {
         webhookRequest.Headers.TryGetValue("X-Goog-Channel-Token", out var stateToken);
         webhookRequest.Headers.TryGetValue("X-Goog-Resource-State", out var resourceState);
         webhookRequest.Headers.TryGetValue("X-Goog-Channel-ID", out var channelId);
-        webhookRequest.Headers.TryGetValue("X-Goog-Resource-ID", out var resourceId);
+        webhookRequest.Headers.TryGetValue("X-Goog-Resource-ID", out var resourceId); // This is the watched resource (in our case still the folder)
         
         if (resourceState != "update")
         {

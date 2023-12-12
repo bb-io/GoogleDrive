@@ -6,7 +6,7 @@ namespace Apps.GoogleDrive.Webhooks;
 
 public class WebhookInput
 {
-    [Display("Resource ID")]
+    [Display("Folder")]
     [DataSource(typeof(FolderDataHandler))]
     public string ResourceId { get; set; }
 }

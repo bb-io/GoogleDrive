@@ -1,10 +1,12 @@
 ﻿using Apps.GoogleDrive.Clients;
 using Apps.GoogleDrive.Dtos;
+using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Requests;
 using Apps.GoogleDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Google.Apis.Download;
 using Google.Apis.DriveActivity.v2.Data;
 using System.Net.Mime;
@@ -13,88 +15,88 @@ using File = Blackbird.Applications.Sdk.Common.Files.File;
 namespace Apps.GoogleDrive.Actions;
 
 [ActionList]
-public class StorageActions
+public class StorageActions : DriveInvocable
 {
+    public StorageActions(InvocationContext invocationContext) : base(invocationContext)
+    {
+    }
+
     #region File actions
 
-    [Action("Get all items details", Description = "Get all items(files/folders) details")]
-    public GetAllItemsResponse GetAllItemsDetails(
-        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders)
-    {
-        var client = new GoogleDriveClient(authenticationCredentialsProviders);
-        var filesListr = client.Files.List();
-        filesListr.SupportsAllDrives = true;
-        var filesList = filesListr.Execute();
-            
-        var filesDetails = new List<ItemsDetailsDto>();
-        foreach (var file in filesList.Files)
-        {
-            filesDetails.Add(new ItemsDetailsDto
-            {
-                Id = file.Id,
-                Name = file.Name,
-                MimeType = file.MimeType
-            });
-        }
+    //[Action("Get all items details", Description = "Get all items(files/folders) details")]
+    //public GetAllItemsResponse GetAllItemsDetails()
+    //{
+    //    var filesListr = Client.Files.List();
+    //    filesListr.SupportsAllDrives = true;
+    //    var filesList = filesListr.Execute();
 
-        return new GetAllItemsResponse(filesDetails);
-    }
+    //    var filesDetails = new List<ItemsDetailsDto>();
+    //    foreach (var file in filesList.Files)
+    //    {
+    //        filesDetails.Add(new ItemsDetailsDto
+    //        {
+    //            Id = file.Id,
+    //            Name = file.Name,
+    //            MimeType = file.MimeType
+    //        });
+    //    }
 
-    [Action("Get changed files", Description = "Get all files that have been created or modified in the last time period")]
-    public async Task<GetChangedItemsResponse> GetChangedFiles(
-        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] GetChangedFilesRequest input)
-    {
-        var activityClient = new GoogleDriveActivityClient(authenticationCredentialsProviders);
-        var driveItems = new List<DriveItem>();
-        var deletedItemIds = new List<string>();
+    //    return new GetAllItemsResponse(filesDetails);
+    //}
 
-        string? pageToken = null;
-        var filterTime = (DateTimeOffset)(DateTime.Now - TimeSpan.FromHours(input.LastHours));
-    
-        do
-        {
-            var request = activityClient.Activity.Query(new()
-            {
-                Filter = $"time >= {filterTime.ToUnixTimeMilliseconds()} AND detail.action_detail_case:(CREATE EDIT DELETE)",
-                PageToken = pageToken
-            });
+    //[Action("Get changed files", Description = "Get all files that have been created or modified in the last time period")]
+    //public async Task<GetChangedItemsResponse> GetChangedFiles([ActionParameter] GetChangedFilesRequest input)
+    //{
+    //    var activityClient = new GoogleDriveActivityClient(InvocationContext.AuthenticationCredentialsProviders);
+    //    var driveItems = new List<DriveItem>();
+    //    var deletedItemIds = new List<string>();
 
-            var response = await request.ExecuteAsync();
-            pageToken = response.NextPageToken;
+    //    string? pageToken = null;
+    //    var filterTime = (DateTimeOffset)(DateTime.Now - TimeSpan.FromHours(input.LastHours));
 
-            var deletedItems = response.Activities?
-                .Where(x => x.PrimaryActionDetail.Delete != null)
-                .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
-                .Where(x => x != null)
-                .Where(x => x.MimeType != "application/vnd.google-apps.folder")
-                .Select(x => x.Name);
+    //    do
+    //    {
+    //        var request = activityClient.Activity.Query(new()
+    //        {
+    //            Filter = $"time >= {filterTime.ToUnixTimeMilliseconds()} AND detail.action_detail_case:(CREATE EDIT DELETE)",
+    //            PageToken = pageToken
+    //        });
 
-            var items = response.Activities?
-                .Where(x => x.PrimaryActionDetail.Create != null || x.PrimaryActionDetail.Edit != null)
-                .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
-                .Where(x => x != null)
-                .Where(x => x.MimeType != "application/vnd.google-apps.folder");
+    //        var response = await request.ExecuteAsync();
+    //        pageToken = response.NextPageToken;
 
-            if (items != null)
-                driveItems.AddRange(items);
+    //        var deletedItems = response.Activities?
+    //            .Where(x => x.PrimaryActionDetail.Delete != null)
+    //            .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
+    //            .Where(x => x != null)
+    //            .Where(x => x.MimeType != "application/vnd.google-apps.folder")
+    //            .Select(x => x.Name);
 
-            if (deletedItems != null)
-                deletedItemIds.AddRange(deletedItems);
-        } while (!string.IsNullOrEmpty(pageToken));
+    //        var items = response.Activities?
+    //            .Where(x => x.PrimaryActionDetail.Create != null || x.PrimaryActionDetail.Edit != null)
+    //            .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
+    //            .Where(x => x != null)
+    //            .Where(x => x.MimeType != "application/vnd.google-apps.folder");
 
-        var allChangedItems = driveItems.Where(x => !deletedItemIds.Contains(x.Name)).DistinctBy(x => x.Name);
+    //        if (items != null)
+    //            driveItems.AddRange(items);
 
-        return new GetChangedItemsResponse
-        {
-            ItemsDetails = allChangedItems.Select(x => new ItemsDetailsDto 
-            { 
-                Name = x.Title, 
-                Id = x.Name.Split("/").Last(),
-                MimeType= x.MimeType,
-            })
-        };
-    }
+    //        if (deletedItems != null)
+    //            deletedItemIds.AddRange(deletedItems);
+    //    } while (!string.IsNullOrEmpty(pageToken));
+
+    //    var allChangedItems = driveItems.Where(x => !deletedItemIds.Contains(x.Name)).DistinctBy(x => x.Name);
+
+    //    return new GetChangedItemsResponse
+    //    {
+    //        ItemsDetails = allChangedItems.Select(x => new ItemsDetailsDto
+    //        {
+    //            Name = x.Title,
+    //            Id = x.Name.Split("/").Last(),
+    //            MimeType = x.MimeType,
+    //        })
+    //    };
+    //}
 
     private Dictionary<string, string> _mimeMap = new Dictionary<string, string>
     {
@@ -113,12 +115,9 @@ public class StorageActions
     };
 
     [Action("Download file", Description = "Download a file")]
-    public File GetFile(
-        IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] GetFileRequest input)
+    public File GetFile([ActionParameter] GetFileRequest input)
     {
-        var client = new GoogleDriveClient(authenticationCredentialsProviders);
-        var request = client.Files.Get(input.FileId);
+        var request = Client.Files.Get(input.FileId);
         var fileMetadata = request.Execute();
 
         byte[] data;
@@ -129,7 +128,7 @@ public class StorageActions
             {
                 if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
                     throw new Exception($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
+                var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
                 exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
                 fileName += _extensionMap[fileMetadata.MimeType];
             }
@@ -146,27 +145,23 @@ public class StorageActions
     }
 
     [Action("Upload file", Description = "Upload a file")]
-    public void UploadFile(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] UploadFileRequest input)
+    public void UploadFile([ActionParameter] UploadFileRequest input)
     {
-        var client = new GoogleDriveClient(authenticationCredentialsProviders);
         var body = new Google.Apis.Drive.v3.Data.File();
         body.Name = input.File.Name;
         body.Parents = new List<string> { input.ParentFolderId };
 
         using (var stream = new MemoryStream(input.File.Bytes))
         {
-            var request = client.Files.Create(body, stream, null);
+            var request = Client.Files.Create(body, stream, null);
             request.Upload();
         }
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
-    public void DeleteItem(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] DeleteItemRequest input)
+    public void DeleteItem([ActionParameter] DeleteItemRequest input)
     {
-        var client = new GoogleDriveClient(authenticationCredentialsProviders);
-        client.Files.Delete(input.ItemId).Execute();
+        Client.Files.Delete(input.ItemId).Execute();
     }
 
     #endregion
@@ -174,17 +169,15 @@ public class StorageActions
     #region Folder actions
 
     [Action("Create folder", Description = "Create folder")]
-    public void CreateFolder(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders,
-        [ActionParameter] CreateFolderRequest input)
+    public void CreateFolder([ActionParameter] CreateFolderRequest input)
     {
-        var client = new GoogleDriveClient(authenticationCredentialsProviders);
         var fileMetadata = new Google.Apis.Drive.v3.Data.File
         {
             Name = input.FolderName,
             MimeType = "application/vnd.google-apps.folder",
             Parents = new List<string> { input.ParentFolderId }
         };
-        var request = client.Files.Create(fileMetadata);
+        var request = Client.Files.Create(fileMetadata);
         request.Execute();
     }
 
