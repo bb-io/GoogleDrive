@@ -8,6 +8,16 @@ namespace Apps.GoogleDrive.Webhooks;
 [WebhookList]
 public class WebhookList
 {
+    //TODO: change to:
+
+    // On item added (with optional parent folder input)
+    // On item removed (with optional parent folder input)
+    // On item properties updated
+    // On item trashed
+    // On item untrashed
+    // Every event should have an additional optional property to look for only files, folders or both. Dynamic property name: Item type, options: File, Folder, Both
+    // See: https://developers.google.com/drive/api/guides/push
+
     [Webhook("On folder content added", typeof(FolderContentAddedHandler), Description = "On folder content added")]
     public async Task<WebhookResponse<FolderContentChangedPayload>> FolderContentAdded(WebhookRequest webhookRequest) // This output value is not great and contains useless information
     {
