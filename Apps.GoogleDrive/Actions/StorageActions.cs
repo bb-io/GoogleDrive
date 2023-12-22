@@ -1,24 +1,24 @@
-﻿using Apps.GoogleDrive.Clients;
-using Apps.GoogleDrive.Dtos;
-using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Requests;
-using Apps.GoogleDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Google.Apis.Download;
-using Google.Apis.DriveActivity.v2.Data;
 using System.Net.Mime;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
+using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 
 namespace Apps.GoogleDrive.Actions;
 
 [ActionList]
 public class StorageActions : DriveInvocable
 {
-    public StorageActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public StorageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(
+        invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     #region File actions
@@ -100,9 +100,18 @@ public class StorageActions : DriveInvocable
 
     private Dictionary<string, string> _mimeMap = new Dictionary<string, string>
     {
-        { "application/vnd.google-apps.document", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
-        { "application/vnd.google-apps.presentation", "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
-        { "application/vnd.google-apps.spreadsheet", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+        {
+            "application/vnd.google-apps.document",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        },
+        {
+            "application/vnd.google-apps.presentation",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        },
+        {
+            "application/vnd.google-apps.spreadsheet",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        },
         { "application/vnd.google-apps.drawing", "application/pdf" }
     };
 
@@ -115,47 +124,42 @@ public class StorageActions : DriveInvocable
     };
 
     [Action("Download file", Description = "Download a file")]
-    public File GetFile([ActionParameter] GetFileRequest input)
+    public Task<FileReference> GetFile([ActionParameter] GetFileRequest input)
     {
         var request = Client.Files.Get(input.FileId);
         var fileMetadata = request.Execute();
 
         byte[] data;
         var fileName = fileMetadata.Name;
-        using (var stream = new MemoryStream())
+        using var stream = new MemoryStream();
+        if (fileMetadata.MimeType.Contains("vnd.google-apps"))
         {
-            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-            {
-                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new Exception($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
-                exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
-                fileName += _extensionMap[fileMetadata.MimeType];
-            }
-            else                    
-                request.DownloadWithStatus(stream).ThrowOnFailure();
-
-            data = stream.ToArray();
+            if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
+                throw new Exception(
+                    $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+            var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
+            exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
+            fileName += _extensionMap[fileMetadata.MimeType];
         }
-        return new File(data)
-        {
-            Name = fileName,
-            ContentType = MediaTypeNames.Application.Octet
-        };
+        else
+            request.DownloadWithStatus(stream).ThrowOnFailure();
+
+        data = stream.ToArray();
+
+        return _fileManagementClient.UploadAsync(stream, MediaTypeNames.Application.Octet, fileName);
     }
 
     [Action("Upload file", Description = "Upload a file")]
-    public void UploadFile([ActionParameter] UploadFileRequest input)
+    public async Task UploadFile([ActionParameter] UploadFileRequest input)
     {
         var body = new Google.Apis.Drive.v3.Data.File();
         body.Name = input.File.Name;
         body.Parents = new List<string> { input.ParentFolderId };
 
-        using (var stream = new MemoryStream(input.File.Bytes))
-        {
-            var request = Client.Files.Create(body, stream, null);
-            request.Upload();
-        }
+        var stream = await _fileManagementClient.DownloadAsync(input.File);
+
+        var request = Client.Files.Create(body, stream, null);
+        await request.UploadAsync();
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
