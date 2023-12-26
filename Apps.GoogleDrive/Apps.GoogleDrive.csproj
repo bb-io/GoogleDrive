@@ -13,7 +13,6 @@
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.0-alpha2" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.60.0.2986" />
     <PackageReference Include="Google.Apis.DriveActivity.v2" Version="1.61.0.3106" />
-    <PackageReference Include="Microsoft.AspNetCore.WebUtilities" Version="2.2.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource CopyToOutputDirectory="Always" Include="image\icon.png" />
