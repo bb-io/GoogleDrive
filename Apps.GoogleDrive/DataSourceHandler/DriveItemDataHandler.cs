@@ -1,4 +1,5 @@
 ﻿using Apps.GoogleDrive.Actions;
+using Apps.GoogleDrive.Invocables;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -6,10 +7,8 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.GoogleDrive.DataSourceHandler;
 
-public class DriveItemDataHandler : BaseInvocable, IDataSourceHandler
+public class DriveItemDataHandler : DriveInvocable, IDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
 
     public DriveItemDataHandler(InvocationContext invocationContext) : base(invocationContext)
     {
@@ -17,13 +16,15 @@ public class DriveItemDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var actions = new StorageActions();
-        var items = actions.GetAllItemsDetails(Creds);
+        var filesListr = Client.Files.List();
 
-        return items.Items
-            .Where(x => context.SearchString == null ||
-                        x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
-            .Take(20)
-            .ToDictionary(x => x.Id, x => x.Name);
+        filesListr.SupportsAllDrives = true;
+        if (context.SearchString != null)
+            filesListr.Q += $"name contains '{context.SearchString}'";
+        filesListr.PageSize = 20;
+
+        var filesList = filesListr.Execute();
+
+        return filesList.Files.ToDictionary(x => x.Id, x => x.Name);
     }
 }

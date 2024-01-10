@@ -1,4 +1,5 @@
 ﻿using Apps.GoogleDrive.Actions;
+using Apps.GoogleDrive.Invocables;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Dynamic;
@@ -6,10 +7,8 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 
 namespace Apps.GoogleDrive.DataSourceHandler;
 
-public class FileDataHandler : BaseInvocable, IDataSourceHandler
+public class FileDataHandler : DriveInvocable, IDataSourceHandler
 {
-    private IEnumerable<AuthenticationCredentialsProvider> Creds =>
-        InvocationContext.AuthenticationCredentialsProviders;
 
     public FileDataHandler(InvocationContext invocationContext) : base(invocationContext)
     {
@@ -17,13 +16,18 @@ public class FileDataHandler : BaseInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var actions = new StorageActions();
-        var items = actions.GetAllItemsDetails(Creds);
+        var query = "mimeType != 'application/vnd.google-apps.folder'";
+        if (context.SearchString != null)
+            query += $" and name contains '{context.SearchString}'";
 
-        return items.Items
-            .Where(x => x.MimeType is not "application/vnd.google-apps.folder" && (context.SearchString == null ||
-                x.Name.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase)))
-            .Take(20)
-            .ToDictionary(x => x.Id, x => x.Name);
+        var filesListr = Client.Files.List();
+
+        filesListr.SupportsAllDrives = true;
+        filesListr.Q = query;
+        filesListr.PageSize = 20;
+
+        var filesList = filesListr.Execute();
+
+        return filesList.Files.ToDictionary(x => x.Id, x => x.Name);
     }
 }

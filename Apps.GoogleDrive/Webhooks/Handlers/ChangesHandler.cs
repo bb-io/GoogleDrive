@@ -1,17 +1,17 @@
 ﻿using Apps.GoogleDrive.Clients;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
+using Blackbird.Applications.Sdk.Utils.Webhooks.Bridge;
 using Google.Apis.Drive.v3.Data;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
 
-public class ChangesHandler : IWebhookEventHandler
+public class ChangesHandler : BaseInvocable, IWebhookEventHandler
 {
-    private readonly WebhookInput _webhookInput;
-
-    public ChangesHandler([WebhookParameter] WebhookInput input)
+    public ChangesHandler(InvocationContext invocationContext) : base(invocationContext)
     {
-        _webhookInput = input;
     }
 
     private Channel BuildChannel(Dictionary<string, string> values)
@@ -19,8 +19,7 @@ public class ChangesHandler : IWebhookEventHandler
         return new Channel
         {
             Payload = true,
-            Id = values["payloadUrl"].Split('/').Last(),
-            ResourceId = _webhookInput.ResourceId,
+            Id = InvocationContext.Bird.Id.ToString(),
             Expiration = new DateTimeOffset(DateTime.Now.AddDays(7)).ToUnixTimeMilliseconds(),
             Type = "web_hook",
             Address = values["payloadUrl"]
@@ -31,16 +30,36 @@ public class ChangesHandler : IWebhookEventHandler
     {
         var client = new GoogleDriveClient(authenticationCredentialsProvider);
         var channel = BuildChannel(values);
+
         var stateToken = client.Changes.GetStartPageToken().Execute();
+        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
+        await bridgeService.StoreValue(InvocationContext.Bird.Id.ToString(), stateToken.StartPageTokenValue);
+
         var request = client.Changes.Watch(channel, stateToken.StartPageTokenValue);
         await request.ExecuteAsync();
     }
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
     {
+        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
+        var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
+        await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+
         var client = new GoogleDriveClient(authenticationCredentialsProvider);
-        var channel = BuildChannel(values);
+        var channel = new Channel
+        {
+            Id = InvocationContext.Bird.Id.ToString(),
+            ResourceId = resourceId
+        };
         var request = client.Channels.Stop(channel);
         await request.ExecuteAsync();
+    }
+
+    [Period(10000)]
+    public async Task RenewSubscription(IEnumerable<AuthenticationCredentialsProvider> creds,
+        Dictionary<string, string> values)
+    {
+        await UnsubscribeAsync(creds, values);
+        await SubscribeAsync(creds, values);
     }
 }
