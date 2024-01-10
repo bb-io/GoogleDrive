@@ -6,97 +6,28 @@ using Apps.GoogleDrive.Models.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Utils.Extensions.Files;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.DriveActivity.v2.Data;
 using System.Net.Mime;
-using File = Blackbird.Applications.Sdk.Common.Files.File;
+using static Google.Apis.Requests.BatchRequest;
 
 namespace Apps.GoogleDrive.Actions;
 
 [ActionList]
 public class StorageActions : DriveInvocable
 {
-    public StorageActions(InvocationContext invocationContext) : base(invocationContext)
+    private readonly IFileManagementClient _fileManagementClient;
+
+    public StorageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(invocationContext)
     {
+        _fileManagementClient = fileManagementClient;
     }
 
     #region File actions
-
-    //[Action("Get all items details", Description = "Get all items(files/folders) details")]
-    //public GetAllItemsResponse GetAllItemsDetails()
-    //{
-    //    var filesListr = Client.Files.List();
-    //    filesListr.SupportsAllDrives = true;
-    //    var filesList = filesListr.Execute();
-
-    //    var filesDetails = new List<ItemsDetailsDto>();
-    //    foreach (var file in filesList.Files)
-    //    {
-    //        filesDetails.Add(new ItemsDetailsDto
-    //        {
-    //            Id = file.Id,
-    //            Name = file.Name,
-    //            MimeType = file.MimeType
-    //        });
-    //    }
-
-    //    return new GetAllItemsResponse(filesDetails);
-    //}
-
-    //[Action("Get changed files", Description = "Get all files that have been created or modified in the last time period")]
-    //public async Task<GetChangedItemsResponse> GetChangedFiles([ActionParameter] GetChangedFilesRequest input)
-    //{
-    //    var activityClient = new GoogleDriveActivityClient(InvocationContext.AuthenticationCredentialsProviders);
-    //    var driveItems = new List<DriveItem>();
-    //    var deletedItemIds = new List<string>();
-
-    //    string? pageToken = null;
-    //    var filterTime = (DateTimeOffset)(DateTime.Now - TimeSpan.FromHours(input.LastHours));
-
-    //    do
-    //    {
-    //        var request = activityClient.Activity.Query(new()
-    //        {
-    //            Filter = $"time >= {filterTime.ToUnixTimeMilliseconds()} AND detail.action_detail_case:(CREATE EDIT DELETE)",
-    //            PageToken = pageToken
-    //        });
-
-    //        var response = await request.ExecuteAsync();
-    //        pageToken = response.NextPageToken;
-
-    //        var deletedItems = response.Activities?
-    //            .Where(x => x.PrimaryActionDetail.Delete != null)
-    //            .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
-    //            .Where(x => x != null)
-    //            .Where(x => x.MimeType != "application/vnd.google-apps.folder")
-    //            .Select(x => x.Name);
-
-    //        var items = response.Activities?
-    //            .Where(x => x.PrimaryActionDetail.Create != null || x.PrimaryActionDetail.Edit != null)
-    //            .Select(x => x.Targets?.FirstOrDefault()?.DriveItem)
-    //            .Where(x => x != null)
-    //            .Where(x => x.MimeType != "application/vnd.google-apps.folder");
-
-    //        if (items != null)
-    //            driveItems.AddRange(items);
-
-    //        if (deletedItems != null)
-    //            deletedItemIds.AddRange(deletedItems);
-    //    } while (!string.IsNullOrEmpty(pageToken));
-
-    //    var allChangedItems = driveItems.Where(x => !deletedItemIds.Contains(x.Name)).DistinctBy(x => x.Name);
-
-    //    return new GetChangedItemsResponse
-    //    {
-    //        ItemsDetails = allChangedItems.Select(x => new ItemsDetailsDto
-    //        {
-    //            Name = x.Title,
-    //            Id = x.Name.Split("/").Last(),
-    //            MimeType = x.MimeType,
-    //        })
-    //    };
-    //}
 
     private Dictionary<string, string> _mimeMap = new Dictionary<string, string>
     {
@@ -115,7 +46,7 @@ public class StorageActions : DriveInvocable
     };
 
     [Action("Download file", Description = "Download a file")]
-    public File GetFile([ActionParameter] GetFileRequest input)
+    public async Task<FileReference> GetFile([ActionParameter] GetFileRequest input)
     {
         var request = Client.Files.Get(input.FileId);
         var fileMetadata = request.Execute();
@@ -137,11 +68,9 @@ public class StorageActions : DriveInvocable
 
             data = stream.ToArray();
         }
-        return new File(data)
-        {
-            Name = fileName,
-            ContentType = MediaTypeNames.Application.Octet
-        };
+        using var stream2 = new MemoryStream(data);
+        var file = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName);
+        return file;
     }
 
     [Action("Upload file", Description = "Upload a file")]
@@ -151,11 +80,9 @@ public class StorageActions : DriveInvocable
         body.Name = input.File.Name;
         body.Parents = new List<string> { input.ParentFolderId };
 
-        using (var stream = new MemoryStream(input.File.Bytes))
-        {
-            var request = Client.Files.Create(body, stream, null);
-            request.Upload();
-        }
+        using var fileBytes = _fileManagementClient.DownloadAsync(input.File).Result;
+        var request = Client.Files.Create(body, fileBytes, null);
+        request.Upload();    
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]

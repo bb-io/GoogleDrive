@@ -13,5 +13,7 @@ namespace Apps.GoogleDrive
         public const string ClientSecret = "#{GOOGLEDRIVE_CLIENT_SECRET}#";
 
         public const string Scope = "#{GOOGLEDRIVE_SCOPE}#";
+
+        public const string BlackbirdToken = "#{GOOGLEDRIVE_BLACKBIRD_TOKEN}#";
     }
 }
