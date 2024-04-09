@@ -2,12 +2,19 @@
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.Sdk.Common.Metadata;
 
 namespace Apps.GoogleDrive;
 
-public class GoogleDriveApplication : BaseInvocable, IApplication
+public class GoogleDriveApplication : BaseInvocable, IApplication, ICategoryProvider
 {
     private readonly Dictionary<Type, object> _typesInstances;
+
+    public IEnumerable<ApplicationCategory> Categories
+    {
+        get => [ApplicationCategory.FileManagementAndStorage, ApplicationCategory.GoogleApps];
+        set { }
+    }
 
     public GoogleDriveApplication(InvocationContext invocationContext) : base(invocationContext)
     {
@@ -26,6 +33,7 @@ public class GoogleDriveApplication : BaseInvocable, IApplication
         {
             throw new InvalidOperationException($"Instance of type '{typeof(T)}' not found");
         }
+
         return (T)value;
     }
 
