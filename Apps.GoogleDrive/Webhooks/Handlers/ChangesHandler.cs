@@ -3,6 +3,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
+using Google;
 using Google.Apis.Drive.v3.Data;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
@@ -44,7 +45,7 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
     {
         var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
-        if (resourceId == StoredValueNotFound || string.IsNullOrEmpty(resourceId))
+        if (resourceId.Contains(StoredValueNotFound) || string.IsNullOrEmpty(resourceId))
         {
             // If resource id is not found, there is no need to unsubscribe
             return;
@@ -60,7 +61,19 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
         };
         
         var request = client.Channels.Stop(channel);
-        await request.ExecuteAsync();
+        
+        try
+        {
+            await request.ExecuteAsync();
+        }
+        catch (GoogleApiException e)
+        {
+            // If the channel is not found, there is no need to unsubscribe
+            if (e.HttpStatusCode != System.Net.HttpStatusCode.NotFound)
+            {
+                throw;
+            }
+        }
     }
 
     [Period(10000)]
