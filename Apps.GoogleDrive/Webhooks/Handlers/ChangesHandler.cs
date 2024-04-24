@@ -3,7 +3,6 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
-using Google;
 using Google.Apis.Drive.v3.Data;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
@@ -44,7 +43,19 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
     {
         var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
-        var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
+        
+        string value;
+        try
+        {
+            value = await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+        }
+        catch (Exception e)
+        {
+            // If resource id is not found, there is no need to unsubscribe
+            return;
+        }
+        
+        var resourceId = value.Replace("\"", "");
         if (resourceId.Contains(StoredValueNotFound) || string.IsNullOrEmpty(resourceId))
         {
             // If resource id is not found, there is no need to unsubscribe
@@ -61,19 +72,7 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
         };
         
         var request = client.Channels.Stop(channel);
-        
-        try
-        {
-            await request.ExecuteAsync();
-        }
-        catch (GoogleApiException e)
-        {
-            // If the channel is not found, there is no need to unsubscribe
-            if (e.HttpStatusCode != System.Net.HttpStatusCode.NotFound)
-            {
-                throw;
-            }
-        }
+        await request.ExecuteAsync();
     }
 
     [Period(10000)]
