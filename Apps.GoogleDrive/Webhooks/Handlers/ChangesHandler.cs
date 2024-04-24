@@ -11,6 +11,8 @@ namespace Apps.GoogleDrive.Webhooks.Handlers;
 
 public class ChangesHandler : BaseInvocable, IWebhookEventHandler
 {
+    private const string StoredValueNotFound = "Stored value was not found";
+    
     public ChangesHandler(InvocationContext invocationContext) : base(invocationContext)
     {
     }
@@ -52,6 +54,12 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
         {
             var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
             var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
+            if (resourceId == StoredValueNotFound)
+            {
+                // If resource id is not found, there is no need to unsubscribe
+                return;
+            }
+            
             await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
 
             await LogAsync(new
