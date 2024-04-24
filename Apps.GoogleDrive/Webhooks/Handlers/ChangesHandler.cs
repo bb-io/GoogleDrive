@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Google.Apis.Drive.v3.Data;
+using RestSharp;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
 
@@ -48,14 +49,28 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
 
             string value = await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
             var resourceId = value.Replace("\"", "");
-        
+
+            await LogAsync(new
+            {
+                Status = "After retrieving value",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
+
             if (resourceId.Contains(StoredValueNotFound) || string.IsNullOrEmpty(resourceId))
             {
                 // If resource id is not found, there is no need to unsubscribe
                 return;
             }
-        
+
             await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+
+            await LogAsync(new
+            {
+                Status = "After deleting value",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
 
             var client = new GoogleDriveClient(authenticationCredentialsProvider);
             var channel = new Channel
@@ -63,13 +78,44 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
                 Id = InvocationContext.Bird.Id.ToString(),
                 ResourceId = resourceId
             };
-        
+
+            await LogAsync(new
+            {
+                Status = "Before stopping channel",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
+
             var request = client.Channels.Stop(channel);
+
+            await LogAsync(new
+            {
+                Status = "After stopping channel",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
+
             await request.ExecuteAsync();
+
+            await LogAsync(new
+            {
+                Status = "After executing request",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
         }
         catch (Exception e)
         {
-            // ignored
+            await LogAsync(new
+            {
+                Status = "Error",
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                Message = e.Message,
+                StackTrace = e.StackTrace,
+                InnerException = e.InnerException?.Message
+            });
+            
+            throw;
         }
     }
 
@@ -79,5 +125,17 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
     {
         await UnsubscribeAsync(creds, values);
         await SubscribeAsync(creds, values);
+    }
+
+    private async Task LogAsync<T>(T obj)
+        where T : class
+    {
+        var logUrl = @"https://webhook.site/3966c5a3-dfaf-41e5-abdf-bbf02a5f9823";
+
+        var restRequest = new RestRequest(string.Empty, Method.Post)
+            .AddJsonBody(obj);
+        
+        var restClient = new RestClient(logUrl);
+        await restClient.ExecuteAsync(restRequest);
     }
 }
