@@ -4,6 +4,7 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Google.Apis.Drive.v3.Data;
+using RestSharp;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
 
@@ -42,37 +43,49 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
 
     public async Task UnsubscribeAsync(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProvider, Dictionary<string, string> values)
     {
-        var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
-        
-        string value;
         try
         {
-            value = await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+            var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
+
+            string value = await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+            var resourceId = value.Replace("\"", "");
+
+            await LogAsync(new
+            {
+                BirdId = InvocationContext.Bird.Id,
+                ResourceId = resourceId,
+            });
+        
+            if (resourceId.Contains(StoredValueNotFound) || string.IsNullOrEmpty(resourceId))
+            {
+                // If resource id is not found, there is no need to unsubscribe
+                return;
+            }
+        
+            await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+
+            var client = new GoogleDriveClient(authenticationCredentialsProvider);
+            var channel = new Channel
+            {
+                Id = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            };
+        
+            var request = client.Channels.Stop(channel);
+            await request.ExecuteAsync();
         }
         catch (Exception e)
         {
-            // If resource id is not found, there is no need to unsubscribe
-            return;
+            await LogAsync(new
+            {
+                BirdId = InvocationContext.Bird?.Id.ToString() ?? "Unknown",
+                Error = e.Message,
+                StackTrace = e.StackTrace,
+                ExceptionType = e.GetType().ToString()
+            });
+            
+            throw;
         }
-        
-        var resourceId = value.Replace("\"", "");
-        if (resourceId.Contains(StoredValueNotFound) || string.IsNullOrEmpty(resourceId))
-        {
-            // If resource id is not found, there is no need to unsubscribe
-            return;
-        }
-        
-        await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
-
-        var client = new GoogleDriveClient(authenticationCredentialsProvider);
-        var channel = new Channel
-        {
-            Id = InvocationContext.Bird.Id.ToString(),
-            ResourceId = resourceId
-        };
-        
-        var request = client.Channels.Stop(channel);
-        await request.ExecuteAsync();
     }
 
     [Period(10000)]
@@ -81,5 +94,17 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
     {
         await UnsubscribeAsync(creds, values);
         await SubscribeAsync(creds, values);
+    }
+
+    private async Task LogAsync<T>(T obj)
+        where T : class
+    {
+        var logUrl = @"https://webhook.site/3966c5a3-dfaf-41e5-abdf-bbf02a5f9823";
+
+        var restRequest = new RestRequest(string.Empty, Method.Post)
+            .AddJsonBody(obj);
+        
+        var restClient = new RestClient(logUrl);
+        await restClient.ExecuteAsync(restRequest);
     }
 }
