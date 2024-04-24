@@ -36,6 +36,12 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
         var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         await bridgeService.StoreValue(InvocationContext.Bird.Id.ToString(), stateToken.StartPageTokenValue);
 
+        await LogAsync(new
+        {
+            BirdId = InvocationContext.Bird.Id.ToString(),
+            StartPageToken = stateToken.StartPageTokenValue
+        });
+        
         var request = client.Changes.Watch(channel, stateToken.StartPageTokenValue);
         await request.ExecuteAsync();
     }
@@ -47,6 +53,12 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
             var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
             var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
             await bridgeService.DeleteValue(InvocationContext.Bird.Id.ToString() + "_resourceId");
+
+            await LogAsync(new
+            {
+                BirdId = InvocationContext.Bird.Id.ToString(),
+                ResourceId = resourceId
+            });
 
             var client = new GoogleDriveClient(authenticationCredentialsProvider);
             var channel = new Channel
