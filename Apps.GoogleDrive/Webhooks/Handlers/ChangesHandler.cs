@@ -67,6 +67,8 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
                 ExceptionStackTrace = e.StackTrace,
                 ExceptionType = e.GetType().Name
             });
+            
+            throw;
         }
     }
 
