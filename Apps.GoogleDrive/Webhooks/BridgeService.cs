@@ -29,7 +29,7 @@ namespace Apps.GoogleDrive.Webhooks
         {
             var deleteValueRequest = CreateBridgeRequest($"/storage/{AppName}/{key}", Method.Get);
             var result = await _bridgeClient.ExecuteAsync(deleteValueRequest);
-            return result.Content;
+            return result.Content ?? "Stored value was not found";
         }
 
         public async Task DeleteValue(string key)
