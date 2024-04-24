@@ -44,7 +44,7 @@ public class ChangesHandler : BaseInvocable, IWebhookEventHandler
     {
         var bridgeService = new BridgeService(InvocationContext.UriInfo.BridgeServiceUrl.ToString());
         var resourceId = (await bridgeService.RetrieveValue(InvocationContext.Bird.Id.ToString() + "_resourceId")).Replace("\"", "");
-        if (resourceId == StoredValueNotFound)
+        if (resourceId == StoredValueNotFound || string.IsNullOrEmpty(resourceId))
         {
             // If resource id is not found, there is no need to unsubscribe
             return;
