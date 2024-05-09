@@ -18,6 +18,7 @@ public class DriveItemDataHandler : DriveInvocable, IDataSourceHandler
     {
         var filesListr = Client.Files.List();
 
+        filesListr.IncludeItemsFromAllDrives = true;
         filesListr.SupportsAllDrives = true;
         if (context.SearchString != null)
             filesListr.Q += $"name contains '{context.SearchString}'";

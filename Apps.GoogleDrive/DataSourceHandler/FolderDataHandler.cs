@@ -19,6 +19,7 @@ public class FolderDataHandler : DriveInvocable, IDataSourceHandler
 
         var filesListr = Client.Files.List();
 
+        filesListr.IncludeItemsFromAllDrives = true;
         filesListr.SupportsAllDrives = true;
         filesListr.Q = query;
         filesListr.PageSize = 20;
