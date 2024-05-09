@@ -6,7 +6,7 @@ namespace Apps.GoogleDrive.Models.Requests;
 
 public class GetFileRequest
 {
-    [Display("File")]
+    [Display("File ID")]
     [DataSource(typeof(FileDataHandler))]
     public string FileId { get; set; }
 }
