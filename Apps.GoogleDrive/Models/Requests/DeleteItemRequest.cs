@@ -6,7 +6,7 @@ namespace Apps.GoogleDrive.Models.Requests;
 
 public class DeleteItemRequest
 {
-    [Display("Item")]
+    [Display("Item ID")]
     [DataSource(typeof(DriveItemDataHandler))]
     public string ItemId { get; set; }
 }

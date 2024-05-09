@@ -11,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
+using Google.Apis.Drive.v3.Data;
 using Google.Apis.DriveActivity.v2.Data;
 using System.Net.Mime;
 using static Google.Apis.Requests.BatchRequest;
@@ -49,6 +50,7 @@ public class StorageActions : DriveInvocable
     public async Task<FileReference> GetFile([ActionParameter] GetFileRequest input)
     {
         var request = Client.Files.Get(input.FileId);
+        request.SupportsAllDrives = true;
         var fileMetadata = request.Execute();
 
         byte[] data;
@@ -88,7 +90,9 @@ public class StorageActions : DriveInvocable
     [Action("Delete item", Description = "Delete item (file/folder)")]
     public void DeleteItem([ActionParameter] DeleteItemRequest input)
     {
-        Client.Files.Delete(input.ItemId).Execute();
+        var request = Client.Files.Delete(input.ItemId);
+        request.SupportsAllDrives = true;
+        request.Execute();
     }
 
     #endregion
@@ -105,6 +109,7 @@ public class StorageActions : DriveInvocable
             Parents = new List<string> { input.ParentFolderId }
         };
         var request = Client.Files.Create(fileMetadata);
+        request.SupportsAllDrives = true;
         request.Execute();
     }
 
