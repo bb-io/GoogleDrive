@@ -9,7 +9,7 @@ public class UploadFileRequest
 {
     public FileReference File { get; set; }
 
-    [Display("Parent folder")]
+    [Display("Parent folder ID")]
     [DataSource(typeof(FolderDataHandler))]
     public string ParentFolderId { get; set; }
 }

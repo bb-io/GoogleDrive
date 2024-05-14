@@ -100,7 +100,7 @@ public class StorageActions : DriveInvocable
     #region Folder actions
 
     [Action("Create folder", Description = "Create folder")]
-    public void CreateFolder([ActionParameter] CreateFolderRequest input)
+    public CreateFolderResponse CreateFolder([ActionParameter] CreateFolderRequest input)
     {
         var fileMetadata = new Google.Apis.Drive.v3.Data.File
         {
@@ -110,7 +110,12 @@ public class StorageActions : DriveInvocable
         };
         var request = Client.Files.Create(fileMetadata);
         request.SupportsAllDrives = true;
-        request.Execute();
+        var response = request.Execute();
+        return new CreateFolderResponse
+        { 
+            FolderID = response.Id,
+            FolderName = response.Name
+        };
     }
 
     #endregion
