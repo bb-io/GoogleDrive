@@ -1,5 +1,7 @@
-﻿using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Dtos;
+using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Label.Requests;
+using Apps.GoogleDrive.Models.Label.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
@@ -34,6 +36,14 @@ namespace Apps.GoogleDrive.Actions
             {
 
             }, createLabelRequest.Name);
-        } 
+
+        }
+
+        [Action("List labels", Description = "List labels")]
+        public async Task<ListLabelsResponse> ListLabels()
+        {
+            var labels = LabelClient.Labels.List().Execute();
+            return new() { Labels = labels.Labels.Select(x => new LabelDto() { Name = x.Name }).ToList() };
+        }
     }
 }
