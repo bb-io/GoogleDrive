@@ -14,6 +14,10 @@ public class ConnectionDefinition : IConnectionDefinition
             ConnectionUsage = ConnectionUsage.Actions,
             ConnectionProperties = new List<ConnectionProperty>
             {
+                new ConnectionProperty("useAdminAccess")
+                {
+                    DisplayName = "Use admin access (true/false)"
+                }
             }
         },
         //new ConnectionPropertyGroup
