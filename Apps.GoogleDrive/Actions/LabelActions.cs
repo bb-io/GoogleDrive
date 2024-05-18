@@ -34,6 +34,7 @@ namespace Apps.GoogleDrive.Actions
                     Description = createLabelRequest.Description,
                 },
             }).Execute();
+
             LabelClient.Labels.Publish(new Google.Apis.DriveLabels.v2.Data.GoogleAppsDriveLabelsV2PublishLabelRequest()
             {
 
