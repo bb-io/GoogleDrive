@@ -1,7 +1,7 @@
 ﻿using Apps.GoogleDrive.Dtos;
 using Blackbird.Applications.Sdk.Common;
 
-namespace Apps.GoogleDrive.Models.Responses;
+namespace Apps.GoogleDrive.Models.Storage.Responses;
 
 public class GetChangedItemsResponse
 {

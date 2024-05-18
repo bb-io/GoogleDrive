@@ -1,12 +1,7 @@
 ﻿using Apps.GoogleDrive.Clients;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Google.Apis.DriveLabels.v2;
 
 namespace Apps.GoogleDrive.Invocables
 {
@@ -14,9 +9,12 @@ namespace Apps.GoogleDrive.Invocables
     {
         protected GoogleDriveClient Client { get; }
 
+        protected GoogleDriveLabelClient LabelClient { get; }
+
         public DriveInvocable(InvocationContext invocationContext) : base(invocationContext)
         {
             Client = new GoogleDriveClient(InvocationContext.AuthenticationCredentialsProviders);
+            LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
         }
     }
 }

@@ -1,8 +1,8 @@
 ﻿using Apps.GoogleDrive.Clients;
 using Apps.GoogleDrive.Dtos;
 using Apps.GoogleDrive.Invocables;
-using Apps.GoogleDrive.Models.Requests;
-using Apps.GoogleDrive.Models.Responses;
+using Apps.GoogleDrive.Models.Storage.Requests;
+using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Authentication;
