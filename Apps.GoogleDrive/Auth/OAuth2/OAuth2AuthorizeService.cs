@@ -16,16 +16,12 @@ public class OAuth2AuthorizeService : BaseInvocable, IOAuth2AuthorizeService
         string bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
         const string oauthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
 
-        // Labels admin scope
-        var isAdminScopeValid = bool.TryParse(InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(x => x.KeyName == "useAdminAccess").Value, out var isAdminScope);
-        var adminScope = isAdminScopeValid && isAdminScope ? "https://www.googleapis.com/auth/drive.admin.labels" : string.Empty;
-        
         var parameters = new Dictionary<string, string>
         {
             { "client_id", ApplicationConstants.ClientId },
             { "redirect_uri", $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/AuthorizationCode" },
             { "response_type", "code" },
-            { "scope", ApplicationConstants.Scope + $" {adminScope}" },
+            { "scope", ApplicationConstants.Scope },
             { "state", values["state"] },
             { "access_type", "offline" },
             { "prompt", "consent" },
