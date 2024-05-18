@@ -7,6 +7,7 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 
 namespace Apps.GoogleDrive.Actions
 {
+    [ActionList]
     public class LabelActions : DriveInvocable
     {
         private readonly IFileManagementClient _fileManagementClient;
