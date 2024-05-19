@@ -52,7 +52,9 @@ namespace Apps.GoogleDrive.Actions
         [Action("Delete label", Description = "Delete label")]
         public async Task DeleteLabel([ActionParameter] GetLabelRequest labelRequest)
         {
-            await LabelClient.Labels.Delete(labelRequest.LabelId).ExecuteAsync();
+            var deleteRequest = LabelClient.Labels.Delete(labelRequest.LabelId);
+            deleteRequest.UseAdminAccess = true;
+            await deleteRequest.ExecuteAsync();
         }
 
         [Action("List labels", Description = "List labels")]
