@@ -1,6 +1,7 @@
 ﻿using Apps.GoogleDrive.DataSourceHandler;
-using Apps.GoogleDrive100.DataSourceHandler;
+using Apps.GoogleDrive.DataSourceHandler.EnumHandlers;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 
 namespace Apps.GoogleDrive.Webhooks;
@@ -12,6 +13,6 @@ public class WebhookInput
     public string? FolderId { get; set; }
 
     [Display("Trigger on item")]
-    [DataSource(typeof(ItemTypeHandler))]
+    [StaticDataSource(typeof(ItemTypeDataHandler))]
     public string? ItemType { get; set; }
 }

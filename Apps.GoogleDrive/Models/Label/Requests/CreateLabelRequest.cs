@@ -7,12 +7,11 @@ namespace Apps.GoogleDrive.Models.Label.Requests
 {
     public class CreateLabelRequest
     {
-        public string Name { get; set; }
+        public string Title { get; set; }
+        public string? Description { get; set; }
 
         [Display("Label type")]
         [StaticDataSource(typeof(LabelTypeDataHandler))]
         public string Type { get; set; }
-        public string Title { get; set; }
-        public string? Description { get; set; }
     }
 }

@@ -13,7 +13,7 @@ namespace Apps.GoogleDrive.DataSourceHandler.EnumHandlers
         {
             return new()
             {
-                {"LABEL_TYPE_UNSPECIFIED", "Unknown"},
+               // {"LABEL_TYPE_UNSPECIFIED", "Unknown"},
                 {"SHARED", "Shared"},
                 {"ADMIN", "Admin"},
             };
