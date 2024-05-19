@@ -17,7 +17,6 @@ namespace Apps.GoogleDrive.Dtos
             Title = label.Properties.Title;
             Description = label.Properties.Description;
             LabelType = label.LabelType;
-            State = label.Lifecycle.State;
         }
         public string Id { get; set; }
 
@@ -27,6 +26,5 @@ namespace Apps.GoogleDrive.Dtos
 
         [Display("Label type")]
         public string LabelType { get; set; }
-        public string State { get; set; }
     }
 }
