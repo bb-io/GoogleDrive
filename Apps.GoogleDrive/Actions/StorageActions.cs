@@ -1,6 +1,7 @@
 ﻿using Apps.GoogleDrive.Clients;
 using Apps.GoogleDrive.Dtos;
 using Apps.GoogleDrive.Invocables;
+using Apps.GoogleDrive.Models.Label.Requests;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
@@ -116,6 +117,30 @@ public class StorageActions : DriveInvocable
             FolderID = response.Id,
             FolderName = response.Name
         };
+    }
+
+    #endregion
+
+    #region Labels actions
+
+    [Action("Add labels to item", Description = "Add labels to item (file/folder)")]
+    public async Task AddLabelsToItem(
+        [ActionParameter] DeleteItemRequest itemRequest, 
+        [ActionParameter] GetLabelRequest labelsRequest)
+    {
+        var request = Client.Files.ModifyLabels(
+            new ModifyLabelsRequest()
+            {
+                LabelModifications = new List<LabelModification>() { 
+                    new LabelModification() { 
+                        LabelId = labelsRequest.LabelId, 
+                        FieldModifications = new List<LabelFieldModification>() { 
+                            new LabelFieldModification() { } 
+                        } 
+                    } 
+                }
+            }, itemRequest.ItemId);
+        await request.ExecuteAsync();
     }
 
     #endregion

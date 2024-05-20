@@ -6,6 +6,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
+using Google.Apis.DriveLabels.v2.Data;
 
 namespace Apps.GoogleDrive.Actions
 {
@@ -22,10 +23,10 @@ namespace Apps.GoogleDrive.Actions
         [Action("Create label", Description = "Create label")]
         public async Task<LabelDto> CreateLabel([ActionParameter] CreateLabelRequest createLabelRequest)
         {
-            var createRequest = LabelClient.Labels.Create(new Google.Apis.DriveLabels.v2.Data.GoogleAppsDriveLabelsV2Label()
+            var createRequest = LabelClient.Labels.Create(new GoogleAppsDriveLabelsV2Label()
             {
                 LabelType = createLabelRequest.Type,
-                Properties = new Google.Apis.DriveLabels.v2.Data.GoogleAppsDriveLabelsV2LabelProperties()
+                Properties = new GoogleAppsDriveLabelsV2LabelProperties()
                 {
                     Title = createLabelRequest.Title,
                     Description = createLabelRequest.Description,
@@ -34,7 +35,7 @@ namespace Apps.GoogleDrive.Actions
             createRequest.UseAdminAccess = true;
             var createRequestResult = await createRequest.ExecuteAsync();
 
-            var publishRequest = LabelClient.Labels.Publish(new Google.Apis.DriveLabels.v2.Data.GoogleAppsDriveLabelsV2PublishLabelRequest()
+            var publishRequest = LabelClient.Labels.Publish(new GoogleAppsDriveLabelsV2PublishLabelRequest()
             {
                 UseAdminAccess = true
             }, createRequestResult.Name);
@@ -49,9 +50,40 @@ namespace Apps.GoogleDrive.Actions
             return new(label);
         }
 
+        [Action("Add text field to label", Description = "Add text field to label")]
+        public async Task AddTextFieldToLabel(
+            [ActionParameter] GetLabelRequest labelRequest,
+            [ActionParameter] AddTextFieldToLabelRequest addTextFieldRequest)
+        {
+            var updateRequest = LabelClient.Labels.Delta(new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequest()
+            {
+                UseAdminAccess = true,
+                Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
+                {
+                    new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest()
+                    {
+                        CreateField = new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestCreateFieldRequest()
+                        {
+                            Field = new GoogleAppsDriveLabelsV2Field()
+                            {
+                                Properties = new GoogleAppsDriveLabelsV2FieldProperties()
+                                {
+                                    DisplayName = addTextFieldRequest.DisplayName
+                                },
+                                TextOptions = new()
+                            }
+                        }
+                    }
+                }
+            } ,labelRequest.LabelId);
+            await updateRequest.ExecuteAsync();
+        }
+
         [Action("Delete label", Description = "Delete label")]
         public async Task DeleteLabel([ActionParameter] GetLabelRequest labelRequest)
         {
+            var disableRequest = LabelClient.Labels.Disable(new GoogleAppsDriveLabelsV2DisableLabelRequest() { UseAdminAccess = true }, labelRequest.LabelId);
+            await disableRequest.ExecuteAsync();
             var deleteRequest = LabelClient.Labels.Delete(labelRequest.LabelId);
             deleteRequest.UseAdminAccess = true;
             await deleteRequest.ExecuteAsync();
