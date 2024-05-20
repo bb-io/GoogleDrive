@@ -34,12 +34,7 @@ namespace Apps.GoogleDrive.Actions
             });
             createRequest.UseAdminAccess = true;
             var createRequestResult = await createRequest.ExecuteAsync();
-
-            var publishRequest = LabelClient.Labels.Publish(new GoogleAppsDriveLabelsV2PublishLabelRequest()
-            {
-                UseAdminAccess = true
-            }, createRequestResult.Name);
-            var publishResult = await publishRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(createRequestResult.Name);
             return new(publishResult);
         }
 
@@ -51,7 +46,7 @@ namespace Apps.GoogleDrive.Actions
         }
 
         [Action("Add text field to label", Description = "Add text field to label")]
-        public async Task AddTextFieldToLabel(
+        public async Task<LabelDto> AddTextFieldToLabel(
             [ActionParameter] GetLabelRequest labelRequest,
             [ActionParameter] AddTextFieldToLabelRequest addTextFieldRequest)
         {
@@ -60,13 +55,13 @@ namespace Apps.GoogleDrive.Actions
                 UseAdminAccess = true,
                 Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
                 {
-                    new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest()
+                    new()
                     {
-                        CreateField = new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestCreateFieldRequest()
+                        CreateField = new()
                         {
-                            Field = new GoogleAppsDriveLabelsV2Field()
+                            Field = new()
                             {
-                                Properties = new GoogleAppsDriveLabelsV2FieldProperties()
+                                Properties = new()
                                 {
                                     DisplayName = addTextFieldRequest.DisplayName
                                 },
@@ -77,6 +72,135 @@ namespace Apps.GoogleDrive.Actions
                 }
             } ,labelRequest.LabelId);
             await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(labelRequest.LabelId);
+            return new(publishResult);
+        }
+
+        [Action("Add number field to label", Description = "Add number field to label")]
+        public async Task<LabelDto> AddNumberFieldToLabel(
+            [ActionParameter] GetLabelRequest labelRequest,
+            [ActionParameter] AddNumberFieldToLabelRequest addNumberFieldRequest)
+        {
+            var updateRequest = LabelClient.Labels.Delta(new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequest()
+            {
+                UseAdminAccess = true,
+                Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
+                {
+                    new()
+                    {
+                        CreateField = new()
+                        {
+                            Field = new()
+                            {
+                                Properties = new()
+                                {
+                                    DisplayName = addNumberFieldRequest.DisplayName
+                                },
+                                IntegerOptions = new()
+                            }
+                        }
+                    }
+                }
+            }, labelRequest.LabelId);
+            await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(labelRequest.LabelId);
+            return new(publishResult);
+        }
+
+        [Action("Add date field to label", Description = "Add date field to label")]
+        public async Task<LabelDto> AddDateFieldToLabel(
+            [ActionParameter] GetLabelRequest labelRequest,
+            [ActionParameter] AddDateFieldToLabelRequest addDateFieldRequest)
+        {
+            var updateRequest = LabelClient.Labels.Delta(new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequest()
+            {
+                UseAdminAccess = true,
+                Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
+                {
+                    new()
+                    {
+                        CreateField = new()
+                        {
+                            Field = new()
+                            {
+                                Properties = new()
+                                {
+                                    DisplayName = addDateFieldRequest.DisplayName
+                                },
+                                DateOptions = new()
+                            }
+                        }
+                    }
+                }
+            }, labelRequest.LabelId);
+            await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(labelRequest.LabelId);
+            return new(publishResult);
+        }
+
+        [Action("Add user field to label", Description = "Add user field to label")]
+        public async Task<LabelDto> AddUserFieldToLabel(
+            [ActionParameter] GetLabelRequest labelRequest,
+            [ActionParameter] AddUserFieldToLabelRequest addUserFieldRequest)
+        {
+            var updateRequest = LabelClient.Labels.Delta(new GoogleAppsDriveLabelsV2DeltaUpdateLabelRequest()
+            {
+                UseAdminAccess = true,
+                Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
+                {
+                    new()
+                    {
+                        CreateField = new()
+                        {
+                            Field = new()
+                            {
+                                Properties = new()
+                                {
+                                    DisplayName = addUserFieldRequest.DisplayName
+                                },
+                                UserOptions = new()
+                            }
+                        }
+                    }
+                }
+            }, labelRequest.LabelId);
+            await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(labelRequest.LabelId);
+            return new(publishResult);
+        }
+
+        [Action("Add selection field to label", Description = "Add selection field to label")]
+        public async Task<LabelDto> AddSelectionFieldToLabel(
+            [ActionParameter] GetLabelRequest labelRequest,
+            [ActionParameter] AddSelectionFieldToLabelRequest addSelectionFieldRequest)
+        {
+            var updateRequest = LabelClient.Labels.Delta(new()
+            {
+                UseAdminAccess = true,
+                Requests = new List<GoogleAppsDriveLabelsV2DeltaUpdateLabelRequestRequest>()
+                {
+                    new()
+                    {
+                        CreateField = new()
+                        {
+                            Field = new()
+                            {
+                                Properties = new()
+                                {
+                                    DisplayName = addSelectionFieldRequest.DisplayName
+                                },
+                                SelectionOptions = new(){ Choices = addSelectionFieldRequest.Choices.Select(x => 
+                                new GoogleAppsDriveLabelsV2FieldSelectionOptionsChoice(){
+                                    Properties = new(){ DisplayName = x }
+                                }).ToList() }
+                            }
+                        }
+                    }
+                }
+            }, labelRequest.LabelId);
+            await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(labelRequest.LabelId);
+            return new(publishResult);
         }
 
         [Action("Delete label", Description = "Delete label")]
@@ -94,6 +218,15 @@ namespace Apps.GoogleDrive.Actions
         {
             var labels = LabelClient.Labels.List().Execute();
             return new() { Labels = labels.Labels.Select(x => new LabelDto(x)).ToList() };
+        }
+
+        private async Task<GoogleAppsDriveLabelsV2Label> PublishLabel(string labelId)
+        {
+            var publishRequest = LabelClient.Labels.Publish(new GoogleAppsDriveLabelsV2PublishLabelRequest()
+            {
+                UseAdminAccess = true
+            }, labelId);
+            return await publishRequest.ExecuteAsync();
         }
     }
 }
