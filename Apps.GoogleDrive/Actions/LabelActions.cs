@@ -71,8 +71,8 @@ namespace Apps.GoogleDrive.Actions
                     }
                 }
             } ,labelRequest.LabelId);
-            await updateRequest.ExecuteAsync();
-            var publishResult = await PublishLabel(labelRequest.LabelId);
+            var updateRequestResult = await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(updateRequestResult.UpdatedLabel.Name);
             return new(publishResult);
         }
 
@@ -102,8 +102,8 @@ namespace Apps.GoogleDrive.Actions
                     }
                 }
             }, labelRequest.LabelId);
-            await updateRequest.ExecuteAsync();
-            var publishResult = await PublishLabel(labelRequest.LabelId);
+            var updateRequestResult = await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(updateRequestResult.UpdatedLabel.Name);
             return new(publishResult);
         }
 
@@ -133,8 +133,8 @@ namespace Apps.GoogleDrive.Actions
                     }
                 }
             }, labelRequest.LabelId);
-            await updateRequest.ExecuteAsync();
-            var publishResult = await PublishLabel(labelRequest.LabelId);
+            var updateRequestResult = await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(updateRequestResult.UpdatedLabel.Name);
             return new(publishResult);
         }
 
@@ -164,8 +164,8 @@ namespace Apps.GoogleDrive.Actions
                     }
                 }
             }, labelRequest.LabelId);
-            await updateRequest.ExecuteAsync();
-            var publishResult = await PublishLabel(labelRequest.LabelId);
+            var updateRequestResult = await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(updateRequestResult.UpdatedLabel.Name);
             return new(publishResult);
         }
 
@@ -198,8 +198,8 @@ namespace Apps.GoogleDrive.Actions
                     }
                 }
             }, labelRequest.LabelId);
-            await updateRequest.ExecuteAsync();
-            var publishResult = await PublishLabel(labelRequest.LabelId);
+            var updateRequestResult = await updateRequest.ExecuteAsync();
+            var publishResult = await PublishLabel(updateRequestResult.UpdatedLabel.Name);
             return new(publishResult);
         }
 
