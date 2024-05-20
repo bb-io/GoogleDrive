@@ -134,11 +134,11 @@ public class StorageActions : DriveInvocable
                 LabelModifications = new List<LabelModification>() { 
                     new LabelModification() { 
                         LabelId = labelsRequest.LabelId, 
-                        FieldModifications = new List<LabelFieldModification>() { 
-                            new LabelFieldModification() { } 
-                        } 
+                        //FieldModifications = new List<LabelFieldModification>() { 
+                        //    new LabelFieldModification() { } 
+                        //},
                     } 
-                }
+                },
             }, itemRequest.ItemId);
         await request.ExecuteAsync();
     }
