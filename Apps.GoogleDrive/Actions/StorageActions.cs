@@ -1,21 +1,15 @@
-﻿using Apps.GoogleDrive.Clients;
-using Apps.GoogleDrive.Dtos;
-using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Label.Requests;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Blackbird.Applications.Sdk.Utils.Extensions.Files;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.DriveActivity.v2.Data;
-using System.Net.Mime;
-using static Google.Apis.Requests.BatchRequest;
 
 namespace Apps.GoogleDrive.Actions;
 
@@ -89,7 +83,7 @@ public class StorageActions : DriveInvocable
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
-    public void DeleteItem([ActionParameter] DeleteItemRequest input)
+    public void DeleteItem([ActionParameter] GetItemRequest input)
     {
         var request = Client.Files.Delete(input.ItemId);
         request.SupportsAllDrives = true;
@@ -123,9 +117,9 @@ public class StorageActions : DriveInvocable
 
     #region Labels actions
 
-    [Action("Add labels to item", Description = "Add labels to item (file/folder)")]
-    public async Task AddLabelsToItem(
-        [ActionParameter] DeleteItemRequest itemRequest, 
+    [Action("Add label to item", Description = "Add label to item (file/folder)")]
+    public async Task AddLabelToItem(
+        [ActionParameter] GetItemRequest itemRequest, 
         [ActionParameter] GetLabelRequest labelsRequest)
     {
         var request = Client.Files.ModifyLabels(
@@ -134,10 +128,51 @@ public class StorageActions : DriveInvocable
                 LabelModifications = new List<LabelModification>() { 
                     new LabelModification() { 
                         LabelId = labelsRequest.LabelId, 
-                        //FieldModifications = new List<LabelFieldModification>() { 
-                        //    new LabelFieldModification() { } 
-                        //},
                     } 
+                },
+            }, itemRequest.ItemId);
+        await request.ExecuteAsync();
+    }
+
+    [Action("Remove label from item", Description = "Add labels to item (file/folder)")]
+    public async Task RemoveLabelFromItem(
+        [ActionParameter] GetItemRequest itemRequest,
+        [ActionParameter] GetLabelRequest labelsRequest)
+    {
+        var request = Client.Files.ModifyLabels(
+            new ModifyLabelsRequest()
+            {
+                LabelModifications = new List<LabelModification>() {
+                    new LabelModification() {
+                        LabelId = labelsRequest.LabelId, 
+                        RemoveLabel = true
+                    }
+                },
+            }, itemRequest.ItemId);
+        await request.ExecuteAsync();
+    }
+
+    [Action("Set label text field", Description = "Set label text field")]
+    public async Task SetLabelText(
+        [ActionParameter] GetItemRequest itemRequest,
+        [ActionParameter] GetLabelRequest labelsRequest,
+        [ActionParameter] SetLabelTextRequest labelTextRequest)
+    {
+        var request = Client.Files.ModifyLabels(
+            new ModifyLabelsRequest()
+            {
+                LabelModifications = new List<LabelModification>() {
+                    new LabelModification() {
+                        LabelId = labelsRequest.LabelId,
+                        FieldModifications = new List<LabelFieldModification>()
+                        {
+                            new LabelFieldModification()
+                            {
+                                FieldId = labelTextRequest.FieldId,
+                                SetTextValues = new List<string>(){ labelTextRequest.TextFieldValue }
+                            }
+                        }
+                    }
                 },
             }, itemRequest.ItemId);
         await request.ExecuteAsync();
