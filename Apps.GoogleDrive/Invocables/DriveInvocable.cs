@@ -13,7 +13,7 @@ namespace Apps.GoogleDrive.Invocables
         public DriveInvocable(InvocationContext invocationContext) : base(invocationContext)
         {
             Client = new GoogleDriveClient(InvocationContext.AuthenticationCredentialsProviders);
-            LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
+            //LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
         }
     }
 }

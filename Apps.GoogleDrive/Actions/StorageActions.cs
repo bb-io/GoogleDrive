@@ -117,129 +117,129 @@ public class StorageActions : DriveInvocable
 
     #region Labels actions
 
-    [Action("Add label to item", Description = "Add label to item (file/folder)")]
-    public async Task AddLabelToItem(
-        [ActionParameter] GetItemRequest itemRequest, 
-        [ActionParameter] GetLabelRequest labelsRequest)
-    {
-        var request = Client.Files.ModifyLabels(
-            new ModifyLabelsRequest()
-            {
-                LabelModifications = new List<LabelModification>() { 
-                    new LabelModification() { 
-                        LabelId = labelsRequest.LabelId, 
-                    } 
-                },
-            }, itemRequest.ItemId);
-        await request.ExecuteAsync();
-    }
+    //[Action("Add label to item", Description = "Add label to item (file/folder)")]
+    //public async Task AddLabelToItem(
+    //    [ActionParameter] GetItemRequest itemRequest, 
+    //    [ActionParameter] GetLabelRequest labelsRequest)
+    //{
+    //    var request = Client.Files.ModifyLabels(
+    //        new ModifyLabelsRequest()
+    //        {
+    //            LabelModifications = new List<LabelModification>() { 
+    //                new LabelModification() { 
+    //                    LabelId = labelsRequest.LabelId, 
+    //                } 
+    //            },
+    //        }, itemRequest.ItemId);
+    //    await request.ExecuteAsync();
+    //}
 
-    [Action("Remove label from item", Description = "Add labels to item (file/folder)")]
-    public async Task RemoveLabelFromItem(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest)
-    {
-        var request = Client.Files.ModifyLabels(
-            new ModifyLabelsRequest()
-            {
-                LabelModifications = new List<LabelModification>() {
-                    new LabelModification() {
-                        LabelId = labelsRequest.LabelId, 
-                        RemoveLabel = true
-                    }
-                },
-            }, itemRequest.ItemId);
-        await request.ExecuteAsync();
-    }
+    //[Action("Remove label from item", Description = "Add labels to item (file/folder)")]
+    //public async Task RemoveLabelFromItem(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest)
+    //{
+    //    var request = Client.Files.ModifyLabels(
+    //        new ModifyLabelsRequest()
+    //        {
+    //            LabelModifications = new List<LabelModification>() {
+    //                new LabelModification() {
+    //                    LabelId = labelsRequest.LabelId, 
+    //                    RemoveLabel = true
+    //                }
+    //            },
+    //        }, itemRequest.ItemId);
+    //    await request.ExecuteAsync();
+    //}
 
-    [Action("Set label text field", Description = "Set label text field")]
-    public async Task SetLabelText(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest,
-        [ActionParameter] SetLabelTextRequest labelTextRequest)
-    {
-        var labelFieldModification = new LabelFieldModification()
-        {
-            FieldId = labelTextRequest.FieldId,
-            SetTextValues = new List<string>() { labelTextRequest.TextFieldValue }
-        };
-        await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    }
+    //[Action("Set label text field", Description = "Set label text field")]
+    //public async Task SetLabelText(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest,
+    //    [ActionParameter] SetLabelTextRequest labelTextRequest)
+    //{
+    //    var labelFieldModification = new LabelFieldModification()
+    //    {
+    //        FieldId = labelTextRequest.FieldId,
+    //        SetTextValues = new List<string>() { labelTextRequest.TextFieldValue }
+    //    };
+    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
+    //}
 
-    [Action("Set label number field", Description = "Set label number field")]
-    public async Task SetLabelNumber(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest,
-        [ActionParameter] SetLabelNumberRequest labelNumberRequest)
-    {
-        var labelFieldModification = new LabelFieldModification()
-        {
-            FieldId = labelNumberRequest.FieldId,
-            SetIntegerValues = new List<long?>() { labelNumberRequest.NumberFieldValue }
-        };
-        await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    }
+    //[Action("Set label number field", Description = "Set label number field")]
+    //public async Task SetLabelNumber(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest,
+    //    [ActionParameter] SetLabelNumberRequest labelNumberRequest)
+    //{
+    //    var labelFieldModification = new LabelFieldModification()
+    //    {
+    //        FieldId = labelNumberRequest.FieldId,
+    //        SetIntegerValues = new List<long?>() { labelNumberRequest.NumberFieldValue }
+    //    };
+    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
+    //}
 
-    [Action("Set label date field", Description = "Set label date field")]
-    public async Task SetLabelDate(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest,
-        [ActionParameter] SetLabelDateRequest labelDateRequest)
-    {
-        var labelFieldModification = new LabelFieldModification()
-        {
-            FieldId = labelDateRequest.FieldId,
-            SetDateValues = new List<string>() { labelDateRequest.DateFieldValue.ToString("YYYY-MM-dd") }
-        };
-        await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    }
+    //[Action("Set label date field", Description = "Set label date field")]
+    //public async Task SetLabelDate(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest,
+    //    [ActionParameter] SetLabelDateRequest labelDateRequest)
+    //{
+    //    var labelFieldModification = new LabelFieldModification()
+    //    {
+    //        FieldId = labelDateRequest.FieldId,
+    //        SetDateValues = new List<string>() { labelDateRequest.DateFieldValue.ToString("YYYY-MM-dd") }
+    //    };
+    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
+    //}
 
-    [Action("Set label user field", Description = "Set label user field")]
-    public async Task SetLabelUser(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest,
-        [ActionParameter] SetLabelUserRequest labelUserRequest)
-    {
-        var labelFieldModification = new LabelFieldModification()
-        {
-            FieldId = labelUserRequest.FieldId,
-            SetUserValues = new List<string>() { labelUserRequest.UserFieldValue }
-        };
-        await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    }
+    //[Action("Set label user field", Description = "Set label user field")]
+    //public async Task SetLabelUser(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest,
+    //    [ActionParameter] SetLabelUserRequest labelUserRequest)
+    //{
+    //    var labelFieldModification = new LabelFieldModification()
+    //    {
+    //        FieldId = labelUserRequest.FieldId,
+    //        SetUserValues = new List<string>() { labelUserRequest.UserFieldValue }
+    //    };
+    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
+    //}
 
-    [Action("Set label selection field", Description = "Set label selection field")]
-    public async Task SetLabelSelection(
-        [ActionParameter] GetItemRequest itemRequest,
-        [ActionParameter] GetLabelRequest labelsRequest,
-        [ActionParameter] SetLabelFieldBaseRequest labelFieldRequest,
-        [ActionParameter] SetLabelSelectionRequest labelSelectionRequest)
-    {
-        var labelFieldModification = new LabelFieldModification()
-        {
-            FieldId = labelFieldRequest.FieldId,
-            SetSelectionValues = new List<string>() { labelSelectionRequest.SelectionFieldValue }
-        };
-        await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    }
+    //[Action("Set label selection field", Description = "Set label selection field")]
+    //public async Task SetLabelSelection(
+    //    [ActionParameter] GetItemRequest itemRequest,
+    //    [ActionParameter] GetLabelRequest labelsRequest,
+    //    [ActionParameter] SetLabelFieldBaseRequest labelFieldRequest,
+    //    [ActionParameter] SetLabelSelectionRequest labelSelectionRequest)
+    //{
+    //    var labelFieldModification = new LabelFieldModification()
+    //    {
+    //        FieldId = labelFieldRequest.FieldId,
+    //        SetSelectionValues = new List<string>() { labelSelectionRequest.SelectionFieldValue }
+    //    };
+    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
+    //}
 
-    private async Task SetLabelField(string itemId, string labelId, LabelFieldModification fieldModification)
-    {
-        var request = Client.Files.ModifyLabels(
-            new ModifyLabelsRequest()
-            {
-                LabelModifications = new List<LabelModification>() {
-                    new LabelModification() {
-                        LabelId = labelId,
-                        FieldModifications = new List<LabelFieldModification>()
-                        {
-                            fieldModification
-                        }
-                    }
-                },
-            }, itemId);
-        await request.ExecuteAsync();
-    }
+    //private async Task SetLabelField(string itemId, string labelId, LabelFieldModification fieldModification)
+    //{
+    //    var request = Client.Files.ModifyLabels(
+    //        new ModifyLabelsRequest()
+    //        {
+    //            LabelModifications = new List<LabelModification>() {
+    //                new LabelModification() {
+    //                    LabelId = labelId,
+    //                    FieldModifications = new List<LabelFieldModification>()
+    //                    {
+    //                        fieldModification
+    //                    }
+    //                }
+    //            },
+    //        }, itemId);
+    //    await request.ExecuteAsync();
+    //}
 
     #endregion
 }
