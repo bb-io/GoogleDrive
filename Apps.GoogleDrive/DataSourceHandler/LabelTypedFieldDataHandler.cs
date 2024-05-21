@@ -37,17 +37,26 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var label = itemLabels.Labels.FirstOrDefault(x => GetLabelRequest.LabelId.Contains(x.Id));
 
-                    var labelFull = await LabelClient.Labels.Get(GetLabelRequest.LabelId).ExecuteAsync();
+                    var labelFullRequest = LabelClient.Labels.Get(GetLabelRequest.LabelId);
+                    labelFullRequest.View = Google.Apis.DriveLabels.v2.LabelsResource.GetRequest.ViewEnum.LABELVIEWFULL;
+                    var labelFull = await labelFullRequest.ExecuteAsync();
+
                     return labelFull.Fields.Where(x => string.IsNullOrWhiteSpace(context.SearchString) || 
                     x.Properties.DisplayName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
                         .ToDictionary(k => k.Id, v => v.Properties.DisplayName);
                 }
-                var labels = LabelClient.Labels.List().Execute();
+                var labelsRequest = LabelClient.Labels.List();
+                labelsRequest.View = Google.Apis.DriveLabels.v2.LabelsResource.ListRequest.ViewEnum.LABELVIEWFULL;
+                var labels = await labelsRequest.ExecuteAsync();
+
                 return labels.Labels.Where(lab => itemLabels.Labels.Any(itemLab => itemLab.Id == lab.Id)).SelectMany(l => l.Fields.Where(x => string.IsNullOrWhiteSpace(context.SearchString) ||
                     x.Properties.DisplayName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
                 .Select(y => new KeyValuePair<GoogleAppsDriveLabelsV2Label, GoogleAppsDriveLabelsV2Field>(l, y))).ToDictionary(k => k.Value.Id, v => $"{v.Value.Properties.DisplayName} ({v.Key.Properties.Title})");
             }
-            var labelsAll = LabelClient.Labels.List().Execute();
+            var labelsAllRequest = LabelClient.Labels.List();
+            labelsAllRequest.View = Google.Apis.DriveLabels.v2.LabelsResource.ListRequest.ViewEnum.LABELVIEWFULL;
+            var labelsAll = await labelsAllRequest.ExecuteAsync();
+
             return labelsAll.Labels.SelectMany(l => l.Fields.Where(x => string.IsNullOrWhiteSpace(context.SearchString) ||
                 x.Properties.DisplayName.Contains(context.SearchString, StringComparison.OrdinalIgnoreCase))
             .Select(y => new KeyValuePair<GoogleAppsDriveLabelsV2Label, GoogleAppsDriveLabelsV2Field>(l, y))).ToDictionary(k => k.Value.Id, v => $"{v.Value.Properties.DisplayName} ({v.Key.Properties.Title})");
