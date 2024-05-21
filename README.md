@@ -13,3 +13,6 @@ Documentation coming soon.
 Do you want to use this app or do you have feedback on our implementation? Reach out to us using the [established channels](https://www.blackbird.io/) or create an issue.
 
 <!-- end docs -->
+
+For listing, applying labels by all users of google workspace: https://www.googleapis.com/auth/drive.labels 
+For actions in "LabelActions"(creating, updating, deleting labels): https://www.googleapis.com/auth/drive.admin.labels
