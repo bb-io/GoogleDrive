@@ -6,7 +6,45 @@ Blackbird is the new automation backbone for the language technology industry. B
 
 <!-- begin docs -->
 
-Documentation coming soon.
+Google Drive is a file-hosting service and synchronization service developed by Google. Launched on April 24, 2012, Google Drive allows users to store files in the cloud (on Google's servers), synchronize files across devices, and share files
+
+## Before setting up
+
+Before you can connect you need to make sure that:
+
+- You have a **Google Drive** account and you have the credentials to access it.
+
+## Connecting
+
+1. Navigate to Apps, and identify the **Google Drive** app. You can use search to find it.
+2. Click _Add Connection_.
+3. Name your connection for future reference e.g. 'Google Drive connection'.
+4. Click _Authorize connection_.
+5. Establish Google Drive connection via OAuth.
+
+![connection](image/README/connection.png)
+
+## Actions
+
+- **Download files** Download files from Google Drive.
+- **Upload files** Upload files to Google Drive.
+- **Delete item** Delete a file from Google Drive.
+- **Create folder** Create a folder in Google Drive.
+
+## Events
+
+- **On items added** This event triggers when file or folder is added to Google Drive. Inputs allows to specify the folder to watch.
+- **On items updated** This event triggers when file or folder is updated in Google Drive. Inputs allows to specify the folder to watch.
+- **On items removed** This event triggers when file or folder is deleted from Google Drive. Inputs allows to specify the folder to watch.
+- **On items restored** This event triggers when file or folder is restored from trash in Google Drive. Inputs allows to specify the folder to watch.
+
+## Example 
+
+Here is an example of how you can use the Google Drive app in a workflow:
+
+![example](image/README/example.png)
+
+In this example, the workflow starts with the **On items added** event, which triggers when any file or folder is added to Google Drive. Then, the workflow uses the **Download files** action to download the file that was added. In the next step we translate the file via `DeepL` and then upload the translated file to Slack channel.
 
 ## Feedback
 
