@@ -1,6 +1,7 @@
 ﻿using Blackbird.Applications.Sdk.Common.Authentication;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
+using Google.Apis.DriveLabels.v2;
 using Google.Apis.Services;
 
 namespace Apps.GoogleDrive.Clients;

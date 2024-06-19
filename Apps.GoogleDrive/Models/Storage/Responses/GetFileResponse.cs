@@ -1,4 +1,4 @@
-﻿namespace Apps.GoogleDrive.Models.Responses;
+﻿namespace Apps.GoogleDrive.Models.Storage.Responses;
 
 public class GetFileResponse
 {

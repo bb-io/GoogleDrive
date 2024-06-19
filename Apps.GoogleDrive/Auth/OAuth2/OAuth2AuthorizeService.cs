@@ -15,6 +15,7 @@ public class OAuth2AuthorizeService : BaseInvocable, IOAuth2AuthorizeService
     {
         string bridgeOauthUrl = $"{InvocationContext.UriInfo.BridgeServiceUrl.ToString().TrimEnd('/')}/oauth";
         const string oauthUrl = "https://accounts.google.com/o/oauth2/v2/auth";
+
         var parameters = new Dictionary<string, string>
         {
             { "client_id", ApplicationConstants.ClientId },

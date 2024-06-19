@@ -3,7 +3,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 
-namespace Apps.GoogleDrive.Models.Requests;
+namespace Apps.GoogleDrive.Models.Storage.Requests;
 
 public class UploadFileRequest
 {
