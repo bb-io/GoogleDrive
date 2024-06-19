@@ -41,45 +41,57 @@ public class StorageActions : DriveInvocable
         { "application/vnd.google-apps.drawing", ".pdf" }
     };
 
-    [Action("Download file", Description = "Download a file")]
-    public async Task<FileReference> GetFile([ActionParameter] GetFileRequest input)
+    [Action("Download files", Description = "Download files")]
+    public async Task<GetFilesResponse> GetFile([ActionParameter] GetFilesRequest input)
     {
-        var request = Client.Files.Get(input.FileId);
-        request.SupportsAllDrives = true;
-        var fileMetadata = request.Execute();
+        var fileReferences = new List<FileReference>();
 
-        byte[] data;
-        var fileName = fileMetadata.Name;
-        using (var stream = new MemoryStream())
+        foreach (var fileId in input.FileIds)
         {
-            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-            {
-                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new Exception($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
-                exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
-                fileName += _extensionMap[fileMetadata.MimeType];
-            }
-            else                    
-                request.DownloadWithStatus(stream).ThrowOnFailure();
+            var request = Client.Files.Get(fileId);
+            request.SupportsAllDrives = true;
+            var fileMetadata = await request.ExecuteAsync();
 
-            data = stream.ToArray();
+            byte[] data;
+            var fileName = fileMetadata.Name;
+            using (var stream = new MemoryStream())
+            {
+                if (fileMetadata.MimeType.Contains("vnd.google-apps"))
+                {
+                    if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
+                        throw new Exception($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+                    var exportRequest = Client.Files.Export(fileId, _mimeMap[fileMetadata.MimeType]);
+                    exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
+                    fileName += _extensionMap[fileMetadata.MimeType];
+                }
+                else
+                    request.DownloadWithStatus(stream).ThrowOnFailure();
+
+                data = stream.ToArray();
+            }
+            using var stream2 = new MemoryStream(data);
+            var file = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName);
+            fileReferences.Add(file);
         }
-        using var stream2 = new MemoryStream(data);
-        var file = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName);
-        return file;
+
+        return new() { Files = fileReferences };
     }
 
-    [Action("Upload file", Description = "Upload a file")]
-    public void UploadFile([ActionParameter] UploadFileRequest input)
+    [Action("Upload files", Description = "Upload files")]
+    public async Task UploadFile([ActionParameter] UploadFilesRequest input)
     {
-        var body = new Google.Apis.Drive.v3.Data.File();
-        body.Name = input.File.Name;
-        body.Parents = new List<string> { input.ParentFolderId };
+        foreach (var file in input.Files)
+        {
+            var body = new Google.Apis.Drive.v3.Data.File
+            {
+                Name = file.Name,
+                Parents = new List<string> { input.ParentFolderId }
+            };
 
-        using var fileBytes = _fileManagementClient.DownloadAsync(input.File).Result;
-        var request = Client.Files.Create(body, fileBytes, null);
-        request.Upload();    
+            await using var fileBytes = await _fileManagementClient.DownloadAsync(file);
+            var request = Client.Files.Create(body, fileBytes, null);
+            await request.UploadAsync();
+        }
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
