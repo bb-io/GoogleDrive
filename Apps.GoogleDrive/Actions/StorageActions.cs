@@ -4,6 +4,7 @@ using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
@@ -100,6 +101,38 @@ public class StorageActions : DriveInvocable
         var request = Client.Files.Delete(input.ItemId);
         request.SupportsAllDrives = true;
         request.Execute();
+    }
+    
+    [Action("Search files", Description = "Search files by specific criteria")]
+    public async Task<SearchFilesResponse> SearchFiles([ActionParameter] SearchFilesRequest input)
+    {
+        var query = "mimeType != 'application/vnd.google-apps.folder'";
+        if (!string.IsNullOrEmpty(input.FileName))
+        {
+            query += $" and name contains '{input.FileName}'";
+        }
+
+        var filesListResult = Client.Files.List();
+        filesListResult.IncludeItemsFromAllDrives = true;
+        filesListResult.SupportsAllDrives = true;
+        filesListResult.Q = query;
+
+        var filesList = await filesListResult.ExecuteAsync();
+        return new()
+        {
+            Files = filesList.Files.Select(x => new FileDto
+            {
+                Id = x.Id,
+                FileName = x.Name,
+                Size = x.Size ?? 0
+            }).ToList()
+        };
+    }
+    
+    [Action("Debug: Get connection tokens", Description = "Get connection token")]
+    public IEnumerable<AuthenticationCredentialsProvider> GetAccessToken()
+    {
+        return InvocationContext.AuthenticationCredentialsProviders.ToList();
     }
 
     #endregion
