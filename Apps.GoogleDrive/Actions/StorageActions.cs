@@ -4,12 +4,14 @@ using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.DriveActivity.v2.Data;
+using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
 
@@ -101,7 +103,70 @@ public class StorageActions : DriveInvocable
         request.SupportsAllDrives = true;
         request.Execute();
     }
+    
+    [Action("Search files", Description = "Search files by specific criteria")]
+    public async Task<SearchFilesResponse> SearchFilesAsync([ActionParameter] SearchFilesRequest input)
+    {
+        var query = "mimeType != 'application/vnd.google-apps.folder'";
+        
+        if (!string.IsNullOrEmpty(input.FolderId))
+        {
+            query += $" and '{input.FolderId}' in parents";
+        }
+        
+        if (!string.IsNullOrEmpty(input.FileName))
+        {
+            query += $" and name contains '{input.FileName}'";
+        }
+        
+        if(!string.IsNullOrEmpty(input.MimeType))
+        {
+            query += $" and mimeType = '{input.MimeType}'";
+        }
 
+        var filesListResult = Client.Files.List();
+        filesListResult.IncludeItemsFromAllDrives = true;
+        filesListResult.SupportsAllDrives = true;
+        filesListResult.Q = query;
+        
+        if(input.Limit.HasValue)
+        {
+            filesListResult.PageSize = input.Limit.Value;
+        }
+
+        var filesList = await filesListResult.ExecuteAsync();
+        var fileDtos = filesList.Files.Select(x => new FileInfo
+        {
+            Id = x.Id,
+            FileName = x.Name,
+            Size = x.Size ?? 0,
+            MimeType = x.MimeType
+        }).ToList();
+        return new()
+        {
+            Files = fileDtos,
+            TotalCount = fileDtos.Count
+        };
+    }
+    
+    [Action("Find file information", Description = "Find file information by specific criteria")]
+    public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
+    {
+        var searchFilesResponse = await SearchFilesAsync(new SearchFilesRequest
+        {
+            FolderId = input.FolderId,
+            FileName = input.FileName,
+            MimeType = input.MimeType
+        });
+        
+        var first = searchFilesResponse.Files.FirstOrDefault();
+        return new()
+        {
+            FileInfo = first ?? new FileInfo(),
+            Found = first != null
+        };
+    }
+    
     #endregion
 
     #region Folder actions
