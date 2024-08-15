@@ -4,7 +4,6 @@ using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
 using Google.Apis.Drive.v3.Data;
-using RestSharp;
 
 namespace Apps.GoogleDrive.Webhooks.Handlers;
 

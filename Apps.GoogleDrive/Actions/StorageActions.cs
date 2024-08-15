@@ -1,16 +1,12 @@
 ﻿using Apps.GoogleDrive.Invocables;
-using Apps.GoogleDrive.Models.Label.Requests;
+using Apps.GoogleDrive.Models;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
-using Blackbird.Applications.Sdk.Common.Authentication;
-using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
-using Google.Apis.Drive.v3.Data;
-using Google.Apis.DriveActivity.v2.Data;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
@@ -43,40 +39,38 @@ public class StorageActions : DriveInvocable
         { "application/vnd.google-apps.drawing", ".pdf" }
     };
 
-    [Action("Download files", Description = "Download files")]
-    public async Task<GetFilesResponse> GetFile([ActionParameter] GetFilesRequest input)
+    [Action("Download file", Description = "Download a specific file")]
+    public async Task<FileModel> GetFile([ActionParameter] GetFilesRequest input)
     {
-        var fileReferences = new List<FileReference>();
+        var request = Client.Files.Get(input.FileId);
+        request.SupportsAllDrives = true;
+        var fileMetadata = await request.ExecuteAsync();
 
-        foreach (var fileId in input.FileIds)
+        byte[] data;
+        var fileName = fileMetadata.Name;
+        using (var stream = new MemoryStream())
         {
-            var request = Client.Files.Get(fileId);
-            request.SupportsAllDrives = true;
-            var fileMetadata = await request.ExecuteAsync();
-
-            byte[] data;
-            var fileName = fileMetadata.Name;
-            using (var stream = new MemoryStream())
+            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
             {
-                if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-                {
-                    if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                        throw new Exception($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                    var exportRequest = Client.Files.Export(fileId, _mimeMap[fileMetadata.MimeType]);
-                    exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
-                    fileName += _extensionMap[fileMetadata.MimeType];
-                }
-                else
-                    request.DownloadWithStatus(stream).ThrowOnFailure();
-
-                data = stream.ToArray();
+                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
+                    throw new Exception(
+                        $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+                var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
+                exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
+                fileName += _extensionMap[fileMetadata.MimeType];
             }
-            using var stream2 = new MemoryStream(data);
-            var file = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName);
-            fileReferences.Add(file);
+            else
+                request.DownloadWithStatus(stream).ThrowOnFailure();
+
+            data = stream.ToArray();
         }
 
-        return new() { Files = fileReferences };
+        using var stream2 = new MemoryStream(data);
+
+        return new()
+        {
+            File = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName)
+        };
     }
 
     [Action("Upload files", Description = "Upload files")]

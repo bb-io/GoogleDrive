@@ -26,7 +26,7 @@ Before you can connect you need to make sure that:
 
 ## Actions
 
-- **Download files** Download files from Google Drive.
+- **Download file** Download a specific file from Google Drive.
 - **Upload files** Upload files to Google Drive.
 - **Delete item** Delete a file from Google Drive.
 - **Create folder** Create a folder in Google Drive.
