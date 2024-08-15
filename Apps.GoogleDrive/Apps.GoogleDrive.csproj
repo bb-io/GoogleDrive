@@ -9,6 +9,9 @@
     <AssemblyName>Apps.GoogleDrive</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
+    <None Remove="Assets\Styles\1 Branding.html" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.6.0" />
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.1" />
     <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
@@ -23,6 +26,9 @@
   <ItemGroup>
     <Content Include="..\README.md">
       <Link>README.md</Link>
+    </Content>
+    <Content Include="Assets\Styles\1 Branding.html">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
 </Project>
