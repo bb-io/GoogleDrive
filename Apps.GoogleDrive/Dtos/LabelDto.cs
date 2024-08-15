@@ -1,10 +1,5 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Google.Apis.DriveLabels.v2.Data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Apps.GoogleDrive.Dtos
 {

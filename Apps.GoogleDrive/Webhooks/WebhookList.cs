@@ -1,22 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Net;
-using System.Net.Security;
+﻿using System.Net;
 using Apps.GoogleDrive.Clients;
 using Apps.GoogleDrive.Webhooks.Handlers;
 using Apps.GoogleDrive.Webhooks.Payload;
 using Blackbird.Applications.Sdk.Common;
-using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Webhooks;
-using Blackbird.Applications.Sdk.Utils.Webhooks.Bridge;
-using Google.Apis.Auth.OAuth2;
-using Google.Apis.Drive.v3;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.DriveActivity.v2.Data;
-using Google.Apis.Services;
-using Newtonsoft.Json;
-using RestSharp;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Apps.GoogleDrive.Webhooks;
 

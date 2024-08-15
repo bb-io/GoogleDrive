@@ -4,7 +4,6 @@ using Apps.GoogleDrive.Models.Storage.Requests;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Invocation;
-using Google.Apis.Drive.v3.Data;
 using Google.Apis.DriveLabels.v2.Data;
 
 namespace Apps.GoogleDrive.DataSourceHandler
