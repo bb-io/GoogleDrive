@@ -60,8 +60,6 @@ public class OAuth2TokenService : BaseInvocable ,IOAuth2TokenService
     private async Task<Dictionary<string, string>> RequestToken(Dictionary<string, string> bodyParameters,
         CancellationToken cancellationToken)
     {
-        throw new ArgumentException("Some exception in plugin code");
-
         var utcNow = DateTime.UtcNow;
         using HttpClient httpClient = new HttpClient();
         using var httpContent = new FormUrlEncodedContent(bodyParameters);
