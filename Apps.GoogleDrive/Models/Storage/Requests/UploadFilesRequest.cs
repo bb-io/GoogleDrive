@@ -7,7 +7,7 @@ namespace Apps.GoogleDrive.Models.Storage.Requests;
 
 public class UploadFilesRequest
 {
-    public IEnumerable<FileReference> Files { get; set; }
+    public FileReference File { get; set; }
 
     [Display("Parent folder ID")]
     [DataSource(typeof(FolderDataHandler))]

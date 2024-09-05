@@ -1,5 +1,6 @@
 ﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models;
+using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
@@ -73,21 +74,18 @@ public class StorageActions : DriveInvocable
         };
     }
 
-    [Action("Upload files", Description = "Upload files")]
+    [Action("Upload file", Description = "Upload files")]
     public async Task UploadFile([ActionParameter] UploadFilesRequest input)
     {
-        foreach (var file in input.Files)
+        var body = new Google.Apis.Drive.v3.Data.File
         {
-            var body = new Google.Apis.Drive.v3.Data.File
-            {
-                Name = file.Name,
-                Parents = new List<string> { input.ParentFolderId }
-            };
+            Name = input.File.Name,
+            Parents = new List<string> { input.ParentFolderId }
+        };
 
-            await using var fileBytes = await _fileManagementClient.DownloadAsync(file);
-            var request = Client.Files.Create(body, fileBytes, null);
-            await request.UploadAsync();
-        }
+        await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
+        var request = Client.Files.Create(body, fileBytes, null);
+        await request.UploadAsync();
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
@@ -143,7 +141,7 @@ public class StorageActions : DriveInvocable
         };
     }
     
-    [Action("Find file information", Description = "Find file information by specific criteria")]
+    [Action("Get file information", Description = "Get file information by specific criteria")]
     public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
     {
         var searchFilesResponse = await SearchFilesAsync(new SearchFilesRequest
@@ -187,6 +185,17 @@ public class StorageActions : DriveInvocable
     #endregion
 
     #region Labels actions
+
+    [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
+    public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] GetFilesRequest input)
+    {
+        var res = await Client.Files.ListLabels(input.FileId).ExecuteAsync();
+        var fieldKeys = res.Labels.SelectMany(x => x.Fields.Select(y => y.Key));
+        return new FieldKeysResponse
+        {
+            Keys = fieldKeys ?? new List<string>(),
+        };       
+    }
 
     //[Action("Add label to item", Description = "Add label to item (file/folder)")]
     //public async Task AddLabelToItem(

@@ -27,11 +27,15 @@ Before you can connect you need to make sure that:
 ## Actions
 
 - **Download file** Download a specific file from Google Drive.
-- **Upload files** Upload files to Google Drive.
+- **Upload file** Upload a file to Google Drive.
 - **Delete item** Delete a file from Google Drive.
 - **Create folder** Create a folder in Google Drive.
 - **Search files** Search files in Google Drive by providing specific search criteria (e.g. file name, file type, etc.). Returns all files that match the search criteria.
 - **Find file information** Similar to the search files action, but this action returns only the first file that matches the search criteria so you don't need to use a loop to get the file information. Also returns `Is found` output to indicate if the file was found or not.
+
+### Labels
+
+- **Get file labels** returns all the label field keys attached to a file. This is in the form of a list of strings. You can use the array contains utility action to verify if certain labels are added to this file.
 
 ## Events
 
