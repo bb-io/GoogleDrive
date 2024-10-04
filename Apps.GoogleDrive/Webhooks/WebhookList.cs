@@ -29,25 +29,25 @@ public class WebhookList : BaseInvocable
 
 
     [Webhook("On items added", typeof(ChangesHandler), Description = "On items added")]
-    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsAdded(WebhookRequest webhookRequest, [WebhookParameter(true)] WebhookInput input)
+    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsAdded(WebhookRequest webhookRequest, [WebhookParameter] WebhookInput input)
     {
         return await GetAllChanges(webhookRequest, input, "CREATE");
     }
 
     [Webhook("On items removed", typeof(ChangesHandler), Description = "On items removed")]
-    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsRemoved(WebhookRequest webhookRequest, [WebhookParameter(true)] WebhookInput input)
+    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsRemoved(WebhookRequest webhookRequest, [WebhookParameter] WebhookInput input)
     {
         return await GetAllChanges(webhookRequest, input, "DELETE");
     }
 
     [Webhook("On items updated", typeof(ChangesHandler), Description = "On items updated")]
-    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsUpdated(WebhookRequest webhookRequest, [WebhookParameter(true)] WebhookInput input)
+    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsUpdated(WebhookRequest webhookRequest, [WebhookParameter] WebhookInput input)
     {
         return await GetAllChanges(webhookRequest, input, "EDIT");
     }
 
     [Webhook("On items restored", typeof(ChangesHandler), Description = "On items restored")]
-    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsRestored(WebhookRequest webhookRequest, [WebhookParameter(true)] WebhookInput input)
+    public async Task<WebhookResponse<ChangedItemsPayload>> OnItemsRestored(WebhookRequest webhookRequest, [WebhookParameter] WebhookInput input)
     {
         return await GetAllChanges(webhookRequest, input, "RESTORE");
     }
