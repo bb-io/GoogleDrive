@@ -119,6 +119,7 @@ public class StorageActions : DriveInvocable
         var filesListResult = Client.Files.List();
         filesListResult.IncludeItemsFromAllDrives = true;
         filesListResult.SupportsAllDrives = true;
+        filesListResult.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
         filesListResult.Q = query;
         
         if(input.Limit.HasValue)
@@ -127,13 +128,7 @@ public class StorageActions : DriveInvocable
         }
 
         var filesList = await filesListResult.ExecuteAsync();
-        var fileDtos = filesList.Files.Select(x => new FileInfo
-        {
-            Id = x.Id,
-            FileName = x.Name,
-            Size = x.Size ?? 0,
-            MimeType = x.MimeType
-        }).ToList();
+        var fileDtos = filesList.Files.Select(x => new FileInfo(x)).ToList();
         return new()
         {
             Files = fileDtos,

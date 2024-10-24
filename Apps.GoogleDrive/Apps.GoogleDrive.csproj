@@ -5,11 +5,11 @@
     <Nullable>enable</Nullable>
     <Product>Google Drive</Product>
     <Description>File storage and synchronization service.</Description>
-    <Version>1.1.4</Version>
+    <Version>1.2.0</Version>
     <AssemblyName>Apps.GoogleDrive</AssemblyName>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.6.0" />
+    <PackageReference Include="Blackbird.Applications.Sdk.Common" Version="2.10.0" />
     <PackageReference Include="Blackbird.Applications.SDK.Extensions.FileManagement" Version="1.0.1" />
     <PackageReference Include="Blackbird.Applications.Sdk.Utils" Version="1.0.25" />
     <PackageReference Include="Google.Apis.Drive.v3" Version="1.68.0.3373" />
