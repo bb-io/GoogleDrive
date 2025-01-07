@@ -5,9 +5,11 @@ using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
+using Google.Apis.Upload;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
@@ -84,8 +86,14 @@ public class StorageActions : DriveInvocable
         };
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
-        var request = Client.Files.Create(body, fileBytes, null);
-        await request.UploadAsync();
+        var request = Client.Files.Create(body, fileBytes, input.File.ContentType);
+        request.SupportsAllDrives = true;
+        
+        var result = await request.UploadAsync();
+        if (result.Status == UploadStatus.Failed)
+        {
+            throw new PluginApplicationException($"The file upload operation has failed. API error message: {result.Exception.Message}");
+        }
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]

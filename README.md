@@ -27,7 +27,7 @@ Before you can connect you need to make sure that:
 ## Actions
 
 - **Download file** Download a specific file from Google Drive.
-- **Upload file** Upload a file to Google Drive.
+- **Upload file** Upload a file to Google Drive, including uploading files to a shared drive.
 - **Delete item** Delete a file from Google Drive.
 - **Create folder** Create a folder in Google Drive.
 - **Search files** Search files in Google Drive by providing specific search criteria (e.g. file name, file type, etc.). Returns all files that match the search criteria.
