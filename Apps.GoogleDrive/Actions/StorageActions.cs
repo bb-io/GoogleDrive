@@ -87,6 +87,10 @@ public class StorageActions : DriveInvocable
 
         if (input.File.ContentType.Contains("vnd.google-apps"))
         {
+            if (!_mimeMap.ContainsKey(input.File.ContentType))
+                throw new Exception(
+                    $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
+
             input.File.ContentType = _mimeMap[input.File.ContentType];
         }
 
