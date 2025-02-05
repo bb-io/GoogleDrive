@@ -85,10 +85,15 @@ public class StorageActions : DriveInvocable
             Parents = new List<string> { input.ParentFolderId }
         };
 
+        if (input.File.ContentType.Contains("vnd.google-apps"))
+        {
+            input.File.ContentType = _mimeMap[input.File.ContentType];
+        }
+
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
         var request = Client.Files.Create(body, fileBytes, input.File.ContentType);
         request.SupportsAllDrives = true;
-        
+
         var result = await request.UploadAsync();
         if (result.Status == UploadStatus.Failed)
         {
