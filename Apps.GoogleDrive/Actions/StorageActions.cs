@@ -61,7 +61,7 @@ public class StorageActions : DriveInvocable
                 var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
                 exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
                 fileName += _extensionMap[fileMetadata.MimeType];
-                mimeType = _extensionMap[fileMetadata.MimeType];
+                mimeType = _mimeMap[fileMetadata.MimeType];
             }
             else
                 request.DownloadWithStatus(stream).ThrowOnFailure();
