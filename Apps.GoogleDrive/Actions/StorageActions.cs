@@ -72,7 +72,7 @@ public class StorageActions : DriveInvocable
 
         return new()
         {
-            File = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName)
+            File = await _fileManagementClient.UploadAsync(stream2, _mimeMap[fileMetadata.MimeType], fileName)
         };
     }
 
