@@ -72,7 +72,7 @@ public class StorageActions : DriveInvocable
 
         return new()
         {
-            File = await _fileManagementClient.UploadAsync(stream2, fileMetadata.MimeType, fileName)
+            File = await _fileManagementClient.UploadAsync(stream2, _mimeMap[fileMetadata.MimeType], fileName)
         };
     }
 
@@ -85,10 +85,19 @@ public class StorageActions : DriveInvocable
             Parents = new List<string> { input.ParentFolderId }
         };
 
+        if (input.File.ContentType.Contains("vnd.google-apps"))
+        {
+            if (!_mimeMap.ContainsKey(input.File.ContentType))
+                throw new Exception(
+                    $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
+
+            input.File.ContentType = _mimeMap[input.File.ContentType];
+        }
+
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
         var request = Client.Files.Create(body, fileBytes, input.File.ContentType);
         request.SupportsAllDrives = true;
-        
+
         var result = await request.UploadAsync();
         if (result.Status == UploadStatus.Failed)
         {
