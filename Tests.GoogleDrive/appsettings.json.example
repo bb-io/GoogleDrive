@@ -1,7 +1,6 @@
 {
     "ConnectionDefinition": {
-        "apiKey": "YOUR_API_KEY",
-        "url": "YOUR_URL"
+        "access_token": ""
     },
-    "TestFolder": "YOUR_TEST_FOLDER"
+    "TestFolder": "TestFiles"
 }
