@@ -47,10 +47,14 @@ public class StorageActions : DriveInvocable
     {
         var request = Client.Files.Get(input.FileId);
         request.SupportsAllDrives = true;
-        var fileMetadata = await request.ExecuteAsync();
+
+        var fileMetadata = await ExecuteSafeAsync(() => request.ExecuteAsync());
+
         byte[] data;
         var fileName = fileMetadata.Name;
         var mimeType = fileMetadata.MimeType;
+
+
         using (var stream = new MemoryStream())
         {
             if (fileMetadata.MimeType.Contains("vnd.google-apps"))
@@ -64,7 +68,13 @@ public class StorageActions : DriveInvocable
                 mimeType = _mimeMap[fileMetadata.MimeType];
             }
             else
-                request.DownloadWithStatus(stream).ThrowOnFailure();
+            {
+                await ExecuteSafeAsync<bool>(() =>
+                {
+                    request.DownloadWithStatus(stream).ThrowOnFailure();
+                    return Task.FromResult(true);
+                });
+            }  
 
             data = stream.ToArray();
         }
