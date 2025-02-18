@@ -197,7 +197,9 @@ public class StorageActions : DriveInvocable
         };
         var request = Client.Files.Create(fileMetadata);
         request.SupportsAllDrives = true;
-        var response = request.Execute();
+        var response = ExecuteSafeAsync(() => request.ExecuteAsync())
+                     .GetAwaiter()
+                     .GetResult();
         return new CreateFolderResponse
         { 
             FolderID = response.Id,
