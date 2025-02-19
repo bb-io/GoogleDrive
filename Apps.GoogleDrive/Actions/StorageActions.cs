@@ -207,7 +207,7 @@ public class StorageActions : DriveInvocable
         };
     }
 
-    [Action("Check folder exists", Description = "Given a folder name and a parent folder, check if a folder with the same name exists. Return true and folder ID if it exists.")]
+    [Action("Check folder exists", Description = "Given a folder name and a parent folder, checks if a folder with the same name exists")]
     public async Task<CheckFolderResponse> CheckFolderExists([ActionParameter] CheckFolderRequest input)
     {
         string query = $"mimeType = 'application/vnd.google-apps.folder' and name = '{input.FolderName}' and '{input.ParentFolderId}' in parents and trashed = false";
