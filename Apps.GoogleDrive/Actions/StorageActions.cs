@@ -207,6 +207,35 @@ public class StorageActions : DriveInvocable
         };
     }
 
+    [Action("Check folder exists", Description = "Given a folder name and a parent folder, check if a folder with the same name exists. Return true and folder ID if it exists.")]
+    public async Task<CheckFolderResponse> CheckFolderExists([ActionParameter] CheckFolderRequest input)
+    {
+        string query = $"mimeType = 'application/vnd.google-apps.folder' and name = '{input.FolderName}' and '{input.ParentFolderId}' in parents and trashed = false";
+
+        var listRequest = Client.Files.List();
+        listRequest.Q = query;
+        listRequest.Fields = "files(id, name)";
+        listRequest.SupportsAllDrives = true;
+        listRequest.IncludeItemsFromAllDrives = true;
+
+        var response = await listRequest.ExecuteAsync();
+
+        if (response.Files != null && response.Files.Any())
+        {
+            return new CheckFolderResponse
+            {
+                Exists = true,
+                FolderId = response.Files.First().Id
+            };
+        }
+
+        return new CheckFolderResponse
+        {
+            Exists = false,
+            FolderId = null
+        };
+    }
+
     #endregion
 
     #region Labels actions
