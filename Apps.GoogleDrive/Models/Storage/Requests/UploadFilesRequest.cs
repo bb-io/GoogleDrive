@@ -1,6 +1,7 @@
 ﻿using Apps.GoogleDrive.DataSourceHandler;
 using Apps.GoogleDrive.DataSourceHandler.EnumHandlers;
 using Blackbird.Applications.Sdk.Common;
+using Blackbird.Applications.Sdk.Common.Dictionaries;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
 
@@ -15,6 +16,6 @@ public class UploadFilesRequest
     public string ParentFolderId { get; set; }
 
     [Display("Save as")]
-    [DataSource(typeof(MimeTypeDataHandler))]
+    [StaticDataSource(typeof(MimeTypeDataHandler))]
     public string? SaveAs { get; set; }
 }
