@@ -32,7 +32,7 @@ public class PollingList : DriveInvocable
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
         x => x.TrashedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate);
 
-    //new
+    // New pollings
     [PollingEvent("On file created", "On any file created in specified folder")]
     public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(PollingEventRequest<DateMemory> request,
         [PollingEventParameter]OnFileCreatedRequest filter)

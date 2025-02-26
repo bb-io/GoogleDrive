@@ -15,7 +15,7 @@ namespace Tests.GoogleDrive
     public class PollingTests:TestBase
     {
         [TestMethod]
-        public async Task OnFileCreated()
+        public async Task OnFileCreated_Succes()
         {
             var polling = new PollingList(InvocationContext);
 
@@ -43,7 +43,7 @@ namespace Tests.GoogleDrive
 
 
         [TestMethod]
-        public async Task OnFilesCreated()
+        public async Task OnFilesCreated_IsSuccess()
         {
             var polling = new PollingList(InvocationContext);
 
@@ -72,7 +72,7 @@ namespace Tests.GoogleDrive
         }
 
         [TestMethod]
-        public async Task OnFileUpdatedTest()
+        public async Task OnFileUpdated_IsSuccess()
         {
             var polling = new PollingList(InvocationContext);
 
