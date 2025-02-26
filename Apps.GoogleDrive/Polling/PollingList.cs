@@ -17,16 +17,6 @@ public class PollingList : DriveInvocable
     {
     }
 
-    [PollingEvent("On files created", "On any files are created")]
-    public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesCreated(
-        PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
-        x => x.CreatedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate);
-
-    [PollingEvent("On files updated", "On any files are updated")]
-    public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesUpdated(
-        PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
-        x => x.ModifiedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate);
-
     [PollingEvent("On files deleted in shared drives", "On any files are deleted in shared drives")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesDeleted(
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
