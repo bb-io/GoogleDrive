@@ -42,7 +42,7 @@ public class PollingList : DriveInvocable
                 && x.Parents != null && x.Parents.Contains(filter.FolderId));
     }
 
-    [PollingEvent("On files updated", "On any file updated in specified folder")]
+    [PollingEvent("On file updated", "On any file updated in specified folder")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
         [PollingEventParameter] OnFileUpdateRequest filter,
        PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,

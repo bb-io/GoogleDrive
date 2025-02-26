@@ -47,6 +47,7 @@ Before you can connect you need to make sure that:
 - **On files updated** This event triggers when any existing files are updated.
 - **On files deleted in shared drives** This event triggers when any existing files are deleted in the shared drives.
 - **On file created** On any file created in specified folder
+- **On file updated** On any file updated in specified folder
 
 ## Example 
 
