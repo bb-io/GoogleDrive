@@ -258,6 +258,63 @@ public class StorageActions : DriveInvocable
         };       
     }
 
+
+    [Action("Update file", Description = "Update metadata or content of an existing file without changing the file ID")]
+    public async Task UpdateFile([ActionParameter] UpdateFileRequest input)
+    {
+
+        var fileMetadata = new Google.Apis.Drive.v3.Data.File();
+        if (!string.IsNullOrWhiteSpace(input.NewName))
+        {
+            string newName = input.NewName;
+            if (input.File != null && !newName.Contains("."))
+            {
+                if (_extensionMap.ContainsKey(input.File.ContentType))
+                {
+                    newName += _extensionMap[input.File.ContentType];
+                }
+            }
+            fileMetadata.Name = newName;
+        }
+
+        MemoryStream memoryStream = null;
+        string contentType = null;
+        if (input.File != null)
+        {
+            if (input.File.ContentType.Contains("vnd.google-apps"))
+            {
+                throw new Exception("Updating content for Google Docs files is not supported. Only metadata update is allowed.");
+            }
+
+            memoryStream = new MemoryStream();
+            using (var downloadStream = await _fileManagementClient.DownloadAsync(input.File))
+            {
+                await downloadStream.CopyToAsync(memoryStream);
+            }
+            memoryStream.Position = 0;
+            contentType = input.File.ContentType;
+        }
+
+        if (memoryStream != null)
+        {
+            var updateMediaRequest = Client.Files.Update(fileMetadata, input.FileId, memoryStream, contentType);
+            updateMediaRequest.SupportsAllDrives = true;
+            var progress = await updateMediaRequest.UploadAsync();
+            if (progress.Status == UploadStatus.Failed)
+            {
+                throw new PluginApplicationException($"The file update operation has failed. API error message: {progress.Exception.Message}");
+            }
+        }
+        else
+        {
+            var updateRequest = Client.Files.Update(fileMetadata, input.FileId);
+            updateRequest.SupportsAllDrives = true;
+            await ExecuteSafeAsync(() => updateRequest.ExecuteAsync());
+        }
+    }
+
+
+
     //[Action("Add label to item", Description = "Add label to item (file/folder)")]
     //public async Task AddLabelToItem(
     //    [ActionParameter] GetItemRequest itemRequest, 

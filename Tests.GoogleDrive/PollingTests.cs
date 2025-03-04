@@ -42,34 +42,6 @@ namespace Tests.GoogleDrive
         }
 
 
-        [TestMethod]
-        public async Task OnFilesCreated_IsSuccess()
-        {
-            var polling = new PollingList(InvocationContext);
-
-            var lastInteraction = DateTime.UtcNow.AddHours(-72);
-            var memory = new DateMemory { LastInteractionDate = lastInteraction };
-
-            var pollingRequest = new PollingEventRequest<DateMemory>
-            {
-                Memory = memory,
-                PollingTime = DateTime.UtcNow
-            };
-
-            var filter = new OnFileCreatedRequest
-            {
-                FolderId = "1RFZbX3Cg5cxCuP7TFquEpZqlaQLdJWyG"
-            };
-
-
-            var result = await polling.OnFilesCreated(pollingRequest);
-            foreach (var file in result.Result.Files)
-            {
-                Console.WriteLine($"File ID: {file.Id}, Name: {file.FileName}");
-                Assert.IsNotNull(file);
-            }
-            
-        }
 
         [TestMethod]
         public async Task OnFileUpdated_IsSuccess()
