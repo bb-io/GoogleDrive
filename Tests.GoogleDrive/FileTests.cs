@@ -38,5 +38,18 @@ namespace Tests.GoogleDrive
 
             Assert.IsTrue(true);
         }
+
+
+        [TestMethod]
+        public async Task FileUpdateTest()
+        {
+            var action = new StorageActions(InvocationContext, FileManager);
+
+            var input = new UpdateFileRequest {  FileId= "10HIlZ_1rAtpGhw3J_TixKUTFnu6waHau", File = new FileReference { Name = "test.txt", ContentType = "text/plain" } };
+
+            await action.UpdateFile(input);
+
+            Assert.IsTrue(true);
+        }
     }
 }
