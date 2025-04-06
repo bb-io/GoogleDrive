@@ -60,7 +60,7 @@ public class StorageActions : DriveInvocable
             if (fileMetadata.MimeType.Contains("vnd.google-apps"))
             {
                 if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new Exception(
+                    throw new PluginMisconfigurationException(
                         $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
                 var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
                 exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
