@@ -3,12 +3,14 @@ using Apps.GoogleDrive.Models;
 using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
+using Apps.GoogleDrive.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
+using Google.Apis.Drive.v3.Data;
 using Google.Apis.Upload;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -45,7 +47,7 @@ public class StorageActions : DriveInvocable
     [Action("Download file", Description = "Download a specific file")]
     public async Task<FileModel> GetFile([ActionParameter] GetFilesRequest input)
     {
-        var request = Client.Files.Get(input.FileId);
+        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
 
         var fileMetadata = await ExecuteSafeAsync(() => request.ExecuteAsync());
@@ -62,7 +64,7 @@ public class StorageActions : DriveInvocable
                 if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
                     throw new PluginMisconfigurationException(
                         $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]);
+                var exportRequest = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
                 exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
                 fileName += _extensionMap[fileMetadata.MimeType];
                 mimeType = _mimeMap[fileMetadata.MimeType];
@@ -113,10 +115,10 @@ public class StorageActions : DriveInvocable
         }
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
-        var request = Client.Files.Create(body, fileBytes, input.File.ContentType);
+        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Create(body, fileBytes, input.File.ContentType));
         request.SupportsAllDrives = true;
 
-        var result = await request.UploadAsync();
+        var result = await ErrorHandler.ExecuteWithErrorHandling(() => request.UploadAsync());
         if (result.Status == UploadStatus.Failed)
         {
             throw new PluginApplicationException($"The file upload operation has failed. API error message: {result.Exception.Message}");
@@ -126,9 +128,9 @@ public class StorageActions : DriveInvocable
     [Action("Delete item", Description = "Delete item (file/folder)")]
     public void DeleteItem([ActionParameter] GetItemRequest input)
     {
-        var request = Client.Files.Delete(input.ItemId);
+        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Delete(input.ItemId));
         request.SupportsAllDrives = true;
-        request.Execute();
+        ErrorHandler.ExecuteWithErrorHandling(() => request.Execute());
     }
     
     [Action("Search files", Description = "Search files by specific criteria")]
@@ -151,7 +153,7 @@ public class StorageActions : DriveInvocable
             query += $" and mimeType = '{input.MimeType}'";
         }
 
-        var filesListResult = Client.Files.List();
+        var filesListResult = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.List());
         filesListResult.IncludeItemsFromAllDrives = true;
         filesListResult.SupportsAllDrives = true;
         filesListResult.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
@@ -162,7 +164,7 @@ public class StorageActions : DriveInvocable
             filesListResult.PageSize = input.Limit.Value;
         }
 
-        var filesList = await filesListResult.ExecuteAsync();
+        var filesList = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await filesListResult.ExecuteAsync());
         var fileDtos = filesList.Files.Select(x => new FileInfo(x)).ToList();
         return new()
         {
@@ -174,12 +176,12 @@ public class StorageActions : DriveInvocable
     [Action("Get file information", Description = "Get file information by specific criteria")]
     public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
     {
-        var searchFilesResponse = await SearchFilesAsync(new SearchFilesRequest
+        var searchFilesResponse = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await SearchFilesAsync(new SearchFilesRequest
         {
             FolderId = input.FolderId,
             FileName = input.FileName,
             MimeType = input.MimeType
-        });
+        }));
         
         var first = searchFilesResponse.Files.FirstOrDefault();
         return new()
@@ -202,7 +204,7 @@ public class StorageActions : DriveInvocable
             MimeType = "application/vnd.google-apps.folder",
             Parents = new List<string> { input.ParentFolderId }
         };
-        var request = Client.Files.Create(fileMetadata);
+        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Create(fileMetadata));
         request.SupportsAllDrives = true;
         var response = ExecuteSafeAsync(() => request.ExecuteAsync())
                      .GetAwaiter()
@@ -250,7 +252,8 @@ public class StorageActions : DriveInvocable
     [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
     public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] GetFilesRequest input)
     {
-        var res = await Client.Files.ListLabels(input.FileId).ExecuteAsync();
+        var res = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());
+
         var fieldKeys = res.Labels.SelectMany(x => x.Fields.Select(y => y.Key));
         return new FieldKeysResponse
         {
