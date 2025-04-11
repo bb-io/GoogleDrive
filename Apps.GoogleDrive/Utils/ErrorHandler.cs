@@ -1,4 +1,5 @@
 ﻿using Blackbird.Applications.Sdk.Common.Exceptions;
+using Google;
 using System;
 
 namespace Apps.GoogleDrive.Utils;
@@ -11,7 +12,11 @@ public static class ErrorHandler
         { 
             await action();
         }
-        catch (Exception ex )
+        catch (GoogleApiException ex)
+        {
+            throw new PluginApplicationException(ex.Message);
+        }
+        catch (Exception ex)
         {
             throw new PluginApplicationException(ex.Message);
         }
@@ -22,6 +27,10 @@ public static class ErrorHandler
         try
         {
             return await action();
+        }
+        catch (GoogleApiException ex)
+        {
+            throw new PluginApplicationException(ex.Message);
         }
         catch (Exception ex)
         {
@@ -35,6 +44,10 @@ public static class ErrorHandler
         {
             action();
         }
+        catch (GoogleApiException ex)
+        {
+            throw new PluginApplicationException(ex.Message);
+        }
         catch (Exception ex)
         {
             throw new PluginApplicationException(ex.Message);
@@ -46,6 +59,10 @@ public static class ErrorHandler
         try
         {
             return action();
+        }
+        catch (GoogleApiException ex)
+        {
+            throw new PluginApplicationException(ex.Message);
         }
         catch (Exception ex)
         {
