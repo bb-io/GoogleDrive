@@ -18,7 +18,7 @@ namespace Apps.GoogleDrive.Invocables
             //LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
         }
 
-        protected async Task<T> ExecuteSafeAsync<T>(Func<Task<T>> action)
+        protected async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
         {
             try
             {
@@ -31,7 +31,68 @@ namespace Apps.GoogleDrive.Invocables
                     throw new PluginApplicationException($"The file or folder was not found. Please check your input and try again");
                 }
 
-                throw new PluginApplicationException($"Error while making a request to Google API: {gEx.Message}");
+                throw new PluginApplicationException(gEx.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new PluginApplicationException(ex.Message);
+            }
+        }
+
+        public async Task ExecuteWithErrorHandlingAsync(Func<Task> action)
+        {
+            try
+            {
+                await action();
+            }
+            catch (GoogleApiException gEx)
+            {
+                if (gEx.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    throw new PluginApplicationException($"The file or folder was not found. Please check your input and try again");
+                }
+
+                throw new PluginApplicationException(gEx.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new PluginApplicationException(ex.Message);
+            }
+        }
+        public void ExecuteWithErrorHandling(Action action)
+        {
+            try
+            {
+                action();
+            }
+            catch (GoogleApiException gEx)
+            {
+                if (gEx.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    throw new PluginApplicationException($"The file or folder was not found. Please check your input and try again");
+                }
+
+                throw new PluginApplicationException(gEx.Message);
+            }
+            catch (Exception ex)
+            {
+                throw new PluginApplicationException(ex.Message);
+            }
+        }
+        public T ExecuteWithErrorHandling<T>( Func<T> action)
+        {
+            try
+            {
+                return action();
+            }
+            catch (GoogleApiException gEx)
+            {
+                if (gEx.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    throw new PluginApplicationException($"The file or folder was not found. Please check your input and try again");
+                }
+
+                throw new PluginApplicationException(gEx.Message);
             }
             catch (Exception ex)
             {

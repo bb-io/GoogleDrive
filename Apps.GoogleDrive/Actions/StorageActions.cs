@@ -3,7 +3,6 @@ using Apps.GoogleDrive.Models;
 using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
-using Apps.GoogleDrive.Utils;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -47,10 +46,10 @@ public class StorageActions : DriveInvocable
     [Action("Download file", Description = "Download a specific file")]
     public async Task<FileModel> GetFile([ActionParameter] GetFilesRequest input)
     {
-        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
+        var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
 
-        var fileMetadata = await ExecuteSafeAsync(() => request.ExecuteAsync());
+        var fileMetadata = await ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync());
 
         byte[] data;
         var fileName = fileMetadata.Name;
@@ -64,14 +63,14 @@ public class StorageActions : DriveInvocable
                 if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
                     throw new PluginMisconfigurationException(
                         $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
-                exportRequest.DownloadWithStatus(stream).ThrowOnFailure();
+                var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
+                ExecuteWithErrorHandling(() => exportRequest.DownloadWithStatus(stream).ThrowOnFailure());
                 fileName += _extensionMap[fileMetadata.MimeType];
                 mimeType = _mimeMap[fileMetadata.MimeType];
             }
             else
             {
-                await ExecuteSafeAsync<bool>(() =>
+                await ExecuteWithErrorHandlingAsync<bool>(() =>
                 {
                     request.DownloadWithStatus(stream).ThrowOnFailure();
                     return Task.FromResult(true);
@@ -115,10 +114,10 @@ public class StorageActions : DriveInvocable
         }
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
-        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Create(body, fileBytes, input.File.ContentType));
+        var request = ExecuteWithErrorHandling(() => Client.Files.Create(body, fileBytes, input.File.ContentType));
         request.SupportsAllDrives = true;
 
-        var result = await ErrorHandler.ExecuteWithErrorHandling(() => request.UploadAsync());
+        var result = await ExecuteWithErrorHandling(() => request.UploadAsync());
         if (result.Status == UploadStatus.Failed)
         {
             throw new PluginApplicationException($"The file upload operation has failed. API error message: {result.Exception.Message}");
@@ -128,9 +127,9 @@ public class StorageActions : DriveInvocable
     [Action("Delete item", Description = "Delete item (file/folder)")]
     public void DeleteItem([ActionParameter] GetItemRequest input)
     {
-        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Delete(input.ItemId));
+        var request = ExecuteWithErrorHandling(() => Client.Files.Delete(input.ItemId));
         request.SupportsAllDrives = true;
-        ErrorHandler.ExecuteWithErrorHandling(() => request.Execute());
+        ExecuteWithErrorHandling(() => request.Execute());
     }
     
     [Action("Search files", Description = "Search files by specific criteria")]
@@ -153,7 +152,7 @@ public class StorageActions : DriveInvocable
             query += $" and mimeType = '{input.MimeType}'";
         }
 
-        var filesListResult = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.List());
+        var filesListResult = ExecuteWithErrorHandling(() => Client.Files.List());
         filesListResult.IncludeItemsFromAllDrives = true;
         filesListResult.SupportsAllDrives = true;
         filesListResult.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
@@ -164,7 +163,7 @@ public class StorageActions : DriveInvocable
             filesListResult.PageSize = input.Limit.Value;
         }
 
-        var filesList = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await filesListResult.ExecuteAsync());
+        var filesList = await ExecuteWithErrorHandlingAsync(async () => await filesListResult.ExecuteAsync());
         var fileDtos = filesList.Files.Select(x => new FileInfo(x)).ToList();
         return new()
         {
@@ -176,7 +175,7 @@ public class StorageActions : DriveInvocable
     [Action("Get file information", Description = "Get file information by specific criteria")]
     public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
     {
-        var searchFilesResponse = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await SearchFilesAsync(new SearchFilesRequest
+        var searchFilesResponse = await ExecuteWithErrorHandlingAsync(async () => await SearchFilesAsync(new SearchFilesRequest
         {
             FolderId = input.FolderId,
             FileName = input.FileName,
@@ -204,9 +203,9 @@ public class StorageActions : DriveInvocable
             MimeType = "application/vnd.google-apps.folder",
             Parents = new List<string> { input.ParentFolderId }
         };
-        var request = ErrorHandler.ExecuteWithErrorHandling(() => Client.Files.Create(fileMetadata));
+        var request = ExecuteWithErrorHandling(() => Client.Files.Create(fileMetadata));
         request.SupportsAllDrives = true;
-        var response = ExecuteSafeAsync(() => request.ExecuteAsync())
+        var response = ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync())
                      .GetAwaiter()
                      .GetResult();
         return new CreateFolderResponse
@@ -227,7 +226,7 @@ public class StorageActions : DriveInvocable
         listRequest.SupportsAllDrives = true;
         listRequest.IncludeItemsFromAllDrives = true;
 
-        var response = await listRequest.ExecuteAsync();
+        var response =await ExecuteWithErrorHandlingAsync(async () => await listRequest.ExecuteAsync());
 
         if (response.Files != null && response.Files.Any())
         {
@@ -252,7 +251,7 @@ public class StorageActions : DriveInvocable
     [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
     public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] GetFilesRequest input)
     {
-        var res = await ErrorHandler.ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());
+        var res = await ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());
 
         var fieldKeys = res.Labels.SelectMany(x => x.Fields.Select(y => y.Key));
         return new FieldKeysResponse
@@ -300,7 +299,7 @@ public class StorageActions : DriveInvocable
 
         if (memoryStream != null)
         {
-            var updateMediaRequest = Client.Files.Update(fileMetadata, input.FileId, memoryStream, contentType);
+            var updateMediaRequest = ExecuteWithErrorHandling(()=> Client.Files.Update(fileMetadata, input.FileId, memoryStream, contentType));
             updateMediaRequest.SupportsAllDrives = true;
             var progress = await updateMediaRequest.UploadAsync();
             if (progress.Status == UploadStatus.Failed)
@@ -312,7 +311,7 @@ public class StorageActions : DriveInvocable
         {
             var updateRequest = Client.Files.Update(fileMetadata, input.FileId);
             updateRequest.SupportsAllDrives = true;
-            await ExecuteSafeAsync(() => updateRequest.ExecuteAsync());
+            await ExecuteWithErrorHandlingAsync(() => updateRequest.ExecuteAsync());
         }
     }
 
