@@ -72,7 +72,7 @@ public class StorageActions : DriveInvocable
             {
                 await ExecuteWithErrorHandlingAsync<bool>(() =>
                 {
-                    request.DownloadWithStatus(stream).ThrowOnFailure();
+                    ExecuteWithErrorHandling(() => request.DownloadWithStatus(stream).ThrowOnFailure());
                     return Task.FromResult(true);
                 });
             }  
