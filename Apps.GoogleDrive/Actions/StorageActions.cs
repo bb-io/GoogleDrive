@@ -106,7 +106,7 @@ public class StorageActions : DriveInvocable
             else
             {
                 if (!_mimeMap.ContainsKey(input.File.ContentType))
-                    throw new Exception(
+                    throw new PluginMisconfigurationException(
                         $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
 
                 input.File.ContentType = _mimeMap[input.File.ContentType];
@@ -285,7 +285,7 @@ public class StorageActions : DriveInvocable
         {
             if (input.File.ContentType.Contains("vnd.google-apps"))
             {
-                throw new Exception("Updating content for Google Docs files is not supported. Only metadata update is allowed.");
+                throw new PluginMisconfigurationException("Updating content for Google Docs files is not supported. Only metadata update is allowed.");
             }
 
             memoryStream = new MemoryStream();
