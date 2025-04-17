@@ -40,10 +40,6 @@ Before you can connect you need to make sure that:
 
 ## Events
 
-- **On items added** This event triggers when file or folder is added to Google Drive. Inputs allows to specify the folder to watch.
-- **On items updated** This event triggers when file or folder is updated in Google Drive. Inputs allows to specify the folder to watch.
-- **On items removed** This event triggers when file or folder is deleted from Google Drive. Inputs allows to specify the folder to watch.
-- **On items restored** This event triggers when file or folder is restored from trash in Google Drive. Inputs allows to specify the folder to watch.
 - **On files deleted in shared drives** This event triggers when any existing files are deleted in the shared drives.
 - **On file created** On any file created in specified folder
 - **On file updated** On any file updated in specified folder
