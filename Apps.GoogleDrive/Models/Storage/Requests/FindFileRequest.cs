@@ -16,4 +16,7 @@ public class FindFileRequest
     
     [Display("Mime type"), StaticDataSource(typeof(MimeTypeDataHandler))]
     public string? MimeType { get; set; }
+
+    [Display("File name must be exact match?")]
+    public bool? FileExactMatch { get; set; }
 }

@@ -165,6 +165,22 @@ public class StorageActions : DriveInvocable
 
         var filesList = await ExecuteWithErrorHandlingAsync(async () => await filesListResult.ExecuteAsync());
         var fileDtos = filesList.Files.Select(x => new FileInfo(x)).ToList();
+
+        if (input.FileExactMatch.HasValue && input.FileExactMatch.Value && !String.IsNullOrEmpty(input.FileName))
+        {
+            if (fileDtos.Any(x => x.FileName == input.FileName))
+            {
+                fileDtos = fileDtos.Where(x => x.FileName == input.FileName).ToList();
+            }
+            else 
+            {
+                return new()
+                {
+                    Files = new List<FileInfo>(),
+                    TotalCount = 0
+                };
+            }
+        }
         return new()
         {
             Files = fileDtos,
@@ -179,7 +195,8 @@ public class StorageActions : DriveInvocable
         {
             FolderId = input.FolderId,
             FileName = input.FileName,
-            MimeType = input.MimeType
+            MimeType = input.MimeType,
+            FileExactMatch = input.FileExactMatch
         }));
         
         var first = searchFilesResponse.Files.FirstOrDefault();
