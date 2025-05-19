@@ -91,21 +91,21 @@ public class StorageActions : DriveInvocable
     [Action("Upload file", Description = "Upload files")]
     public async Task UploadFile([ActionParameter] UploadFilesRequest input)
     {
-        if (input.File.ContentType.Contains("vnd.google-apps"))
-        {
+        //if (input.File.ContentType.Contains("vnd.google-apps"))
+        //{
             if (!string.IsNullOrWhiteSpace(input.SaveAs))
             {
                 input.File.ContentType = input.SaveAs;
             }
-            else
-            {
-                if (!_mimeMap.ContainsKey(input.File.ContentType))
-                    throw new PluginMisconfigurationException(
-                        $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
+            //else
+            //{
+            //    if (!_mimeMap.ContainsKey(input.File.ContentType))
+            //        throw new PluginMisconfigurationException(
+            //            $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
 
-                input.File.ContentType = _mimeMap[input.File.ContentType];
-            }
-        }
+            //    input.File.ContentType = _mimeMap[input.File.ContentType];
+            //}
+       // }
         var body = new Google.Apis.Drive.v3.Data.File
         {
             Name = input.File.Name,
