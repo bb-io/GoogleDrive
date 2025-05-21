@@ -91,27 +91,27 @@ public class StorageActions : DriveInvocable
     [Action("Upload file", Description = "Upload files")]
     public async Task UploadFile([ActionParameter] UploadFilesRequest input)
     {
-        var body = new Google.Apis.Drive.v3.Data.File
-        {
-            Name = input.File.Name,
-            Parents = new List<string> { input.ParentFolderId }
-        };
-
         if (input.File.ContentType.Contains("vnd.google-apps"))
         {
-            if (!string.IsNullOrWhiteSpace(input.SaveAs))
-            {
-                input.File.ContentType = input.SaveAs;
-            }
-            else
-            {
+            //if (!string.IsNullOrWhiteSpace(input.SaveAs))
+            //{
+            //    input.File.ContentType = input.SaveAs;
+            //}
+            //else
+            //{
                 if (!_mimeMap.ContainsKey(input.File.ContentType))
                     throw new PluginMisconfigurationException(
                         $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
 
                 input.File.ContentType = _mimeMap[input.File.ContentType];
-            }
+           // }
         }
+        var body = new Google.Apis.Drive.v3.Data.File
+        {
+            Name = input.File.Name,
+            Parents = new List<string> { input.ParentFolderId },
+            MimeType = String.IsNullOrEmpty(input.SaveAs)?input.File.ContentType:input.SaveAs
+        };
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
         var request = ExecuteWithErrorHandling(() => Client.Files.Create(body, fileBytes, input.File.ContentType));

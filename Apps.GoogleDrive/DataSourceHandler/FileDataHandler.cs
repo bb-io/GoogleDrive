@@ -13,7 +13,7 @@ public class FileDataHandler : DriveInvocable, IDataSourceHandler
 
     public Dictionary<string, string> GetData(DataSourceContext context)
     {
-        var query = "mimeType != 'application/vnd.google-apps.folder'";
+        var query = "mimeType != 'application/vnd.google-apps.folder' and trashed = false";
         if (context.SearchString != null)
             query += $" and name contains '{context.SearchString}'";
 
