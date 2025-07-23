@@ -1,11 +1,14 @@
 ﻿using Apps.GoogleDrive.Invocables;
+using Apps.GoogleDrive.Models.Label.Responses;
+using Apps.GoogleDrive.Models.Storage.Requests;
+using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 
 namespace Apps.GoogleDrive.Actions
 {
-    [ActionList]
+    [ActionList("Labels")]
     public class LabelActions : DriveInvocable
     {
         private readonly IFileManagementClient _fileManagementClient;
@@ -13,6 +16,18 @@ namespace Apps.GoogleDrive.Actions
         public LabelActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(invocationContext)
         {
             _fileManagementClient = fileManagementClient;
+        }
+
+        [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
+        public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] GetFilesRequest input)
+        {
+            var res = await ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());
+
+            var fieldKeys = res.Labels.SelectMany(x => x.Fields.Select(y => y.Key));
+            return new FieldKeysResponse
+            {
+                Keys = fieldKeys ?? new List<string>(),
+            };
         }
 
         //[Action("Create label", Description = "Create label")]

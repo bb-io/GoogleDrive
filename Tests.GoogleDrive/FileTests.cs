@@ -17,7 +17,7 @@ namespace Tests.GoogleDrive
         [TestMethod]
         public async Task FileDownloadTest()
         {
-            var action = new StorageActions(InvocationContext,FileManager);
+            var action = new FileActions(InvocationContext,FileManager);
 
             var input = new GetFilesRequest { FileId = "1iZCM6o52QobQK2qPMelx9TphdkKYspnW" };
 
@@ -30,7 +30,7 @@ namespace Tests.GoogleDrive
         [TestMethod]
         public async Task FileUploadTest()
         {
-            var action = new StorageActions(InvocationContext, FileManager);
+            var action = new FileActions(InvocationContext, FileManager);
 
             var input = new UploadFilesRequest { File= new FileReference { Name= "test.txt", ContentType= "text/plain" } , ParentFolderId= "10Ugy3Y7-kSXNtxFhnESuVpg89WTGl8wB", SaveAs= "application/pdf" };
 
@@ -43,7 +43,7 @@ namespace Tests.GoogleDrive
         [TestMethod]
         public async Task FileUpdateTest()
         {
-            var action = new StorageActions(InvocationContext, FileManager);
+            var action = new FileActions(InvocationContext, FileManager);
 
             var input = new UpdateFileRequest {  FileId= "10HIlZ_1rAtpGhw3J_TixKUTFnu6waHau", File = new FileReference { Name = "test.txt", ContentType = "text/plain" } };
 

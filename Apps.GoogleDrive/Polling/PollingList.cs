@@ -5,6 +5,7 @@ using Apps.GoogleDrive.Polling.Models.Memory;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
+using Blackbird.Applications.SDK.Blueprints;
 using File = Google.Apis.Drive.v3.Data.File;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -22,8 +23,8 @@ public class PollingList : DriveInvocable
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
         x => x.TrashedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate);
 
-    // New pollings
-    [PollingEvent("On file created", "On any file created in specified folder")]
+    [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
+    [PollingEvent("On files created", "On any file created in specified folder")]
     public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(PollingEventRequest<DateMemory> request,
         [PollingEventParameter]OnFileCreatedRequest filter)
     {
@@ -31,8 +32,8 @@ public class PollingList : DriveInvocable
            x => x.CreatedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate
                 && x.Parents != null && x.Parents.Contains(filter.FolderId));
     }
-
-    [PollingEvent("On file updated", "On any file updated in specified folder")]
+    [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
+    [PollingEvent("On files updated", "On any file updated in specified folder")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
         [PollingEventParameter] OnFileUpdateRequest filter,
        PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,

@@ -8,7 +8,7 @@ namespace Apps.GoogleDrive.Actions;
 [ActionList]
 public class DebugActions(InvocationContext invocationContext) : DriveInvocable(invocationContext)
 {
-    [Action("[Debug] Action", Description = "Debug action")]
+    [Action("Debug", Description = "Debug action")]
     public List<AuthenticationCredentialsProvider> DebugAction() =>
         InvocationContext.AuthenticationCredentialsProviders.ToList();
 }

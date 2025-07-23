@@ -26,13 +26,19 @@ Before you can connect you need to make sure that:
 
 ## Actions
 
+### Files
+
 - **Download file** Download a specific file from Google Drive.
 - **Upload file** Upload a file to Google Drive, including uploading files to a shared drive.
 - **Delete item** Delete a file from Google Drive.
-- **Create folder** Create a folder in Google Drive.
 - **Search files** Search files in Google Drive by providing specific search criteria (e.g. file name, file type, etc.). Returns all files that match the search criteria.
 - **Find file information** Similar to the search files action, but this action returns only the first file that matches the search criteria so you don't need to use a loop to get the file information. Also returns `Is found` output to indicate if the file was found or not.
 - **Update file** Update metadata or content of an existing file without changing the file ID
+
+### Folders
+
+- **Create folder** Create a folder in Google Drive.
+- **Check folder exists** Given a folder name and a parent folder, checks if a folder with the same name exists.
 
 ### Labels
 
@@ -40,9 +46,11 @@ Before you can connect you need to make sure that:
 
 ## Events
 
+### File events
+
 - **On files deleted in shared drives** This event triggers when any existing files are deleted in the shared drives.
-- **On file created** On any file created in specified folder
-- **On file updated** On any file updated in specified folder
+- **On files created** On any file created in specified folder
+- **On files updated** On any file updated in specified folder
 
 ## Example 
 
