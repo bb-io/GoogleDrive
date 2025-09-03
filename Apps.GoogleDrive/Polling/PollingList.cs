@@ -32,7 +32,7 @@ public class PollingList : DriveInvocable
            x => x.CreatedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate
                 && x.Parents != null && x.Parents.Contains(filter.FolderId));
     }
-    [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
+
     [PollingEvent("On files updated", "On any file updated in specified folder")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
         [PollingEventParameter] OnFileUpdateRequest filter,
