@@ -7,6 +7,7 @@ using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
+using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.Drive.v3.Data;
@@ -15,7 +16,7 @@ using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
 
-[ActionList]
+[ActionList("Files")]
 public class StorageActions : DriveInvocable
 {
     private readonly IFileManagementClient _fileManagementClient;
@@ -24,8 +25,6 @@ public class StorageActions : DriveInvocable
     {
         _fileManagementClient = fileManagementClient;
     }
-
-    #region File actions
 
     private Dictionary<string, string> _mimeMap = new Dictionary<string, string>
     {
@@ -43,6 +42,7 @@ public class StorageActions : DriveInvocable
         { "application/vnd.google-apps.drawing", ".pdf" }
     };
 
+    [BlueprintActionDefinition(BlueprintAction.DownloadFile)]
     [Action("Download file", Description = "Download a specific file")]
     public async Task<FileModel> GetFile([ActionParameter] GetFilesRequest input)
     {
@@ -88,6 +88,7 @@ public class StorageActions : DriveInvocable
         };
     }
 
+    [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload files")]
     public async Task UploadFile([ActionParameter] UploadFilesRequest input)
     {
@@ -206,77 +207,6 @@ public class StorageActions : DriveInvocable
             Found = first != null
         };
     }
-    
-    #endregion
-
-    #region Folder actions
-
-    [Action("Create folder", Description = "Create folder")]
-    public CreateFolderResponse CreateFolder([ActionParameter] CreateFolderRequest input)
-    {
-        var fileMetadata = new Google.Apis.Drive.v3.Data.File
-        {
-            Name = input.FolderName,
-            MimeType = "application/vnd.google-apps.folder",
-            Parents = new List<string> { input.ParentFolderId }
-        };
-        var request = ExecuteWithErrorHandling(() => Client.Files.Create(fileMetadata));
-        request.SupportsAllDrives = true;
-        var response = ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync())
-                     .GetAwaiter()
-                     .GetResult();
-        return new CreateFolderResponse
-        { 
-            FolderID = response.Id,
-            FolderName = response.Name
-        };
-    }
-
-    [Action("Check folder exists", Description = "Given a folder name and a parent folder, checks if a folder with the same name exists")]
-    public async Task<CheckFolderResponse> CheckFolderExists([ActionParameter] CheckFolderRequest input)
-    {
-        string query = $"mimeType = 'application/vnd.google-apps.folder' and name = '{input.FolderName}' and '{input.ParentFolderId}' in parents and trashed = false";
-
-        var listRequest = Client.Files.List();
-        listRequest.Q = query;
-        listRequest.Fields = "files(id, name)";
-        listRequest.SupportsAllDrives = true;
-        listRequest.IncludeItemsFromAllDrives = true;
-
-        var response =await ExecuteWithErrorHandlingAsync(async () => await listRequest.ExecuteAsync());
-
-        if (response.Files != null && response.Files.Any())
-        {
-            return new CheckFolderResponse
-            {
-                Exists = true,
-                FolderId = response.Files.First().Id
-            };
-        }
-
-        return new CheckFolderResponse
-        {
-            Exists = false,
-            FolderId = null
-        };
-    }
-
-    #endregion
-
-    #region Labels actions
-
-    [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
-    public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] GetFilesRequest input)
-    {
-        var res = await ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());
-
-        var fieldKeys = res.Labels.SelectMany(x => x.Fields.Select(y => y.Key));
-        return new FieldKeysResponse
-        {
-            Keys = fieldKeys ?? new List<string>(),
-        };       
-    }
-
 
     [Action("Update file", Description = "Update metadata or content of an existing file without changing the file ID")]
     public async Task UpdateFile([ActionParameter] UpdateFileRequest input)
@@ -332,131 +262,4 @@ public class StorageActions : DriveInvocable
         }
     }
 
-
-
-    //[Action("Add label to item", Description = "Add label to item (file/folder)")]
-    //public async Task AddLabelToItem(
-    //    [ActionParameter] GetItemRequest itemRequest, 
-    //    [ActionParameter] GetLabelRequest labelsRequest)
-    //{
-    //    var request = Client.Files.ModifyLabels(
-    //        new ModifyLabelsRequest()
-    //        {
-    //            LabelModifications = new List<LabelModification>() { 
-    //                new LabelModification() { 
-    //                    LabelId = labelsRequest.LabelId, 
-    //                } 
-    //            },
-    //        }, itemRequest.ItemId);
-    //    await request.ExecuteAsync();
-    //}
-
-    //[Action("Remove label from item", Description = "Add labels to item (file/folder)")]
-    //public async Task RemoveLabelFromItem(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest)
-    //{
-    //    var request = Client.Files.ModifyLabels(
-    //        new ModifyLabelsRequest()
-    //        {
-    //            LabelModifications = new List<LabelModification>() {
-    //                new LabelModification() {
-    //                    LabelId = labelsRequest.LabelId, 
-    //                    RemoveLabel = true
-    //                }
-    //            },
-    //        }, itemRequest.ItemId);
-    //    await request.ExecuteAsync();
-    //}
-
-    //[Action("Set label text field", Description = "Set label text field")]
-    //public async Task SetLabelText(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest,
-    //    [ActionParameter] SetLabelTextRequest labelTextRequest)
-    //{
-    //    var labelFieldModification = new LabelFieldModification()
-    //    {
-    //        FieldId = labelTextRequest.FieldId,
-    //        SetTextValues = new List<string>() { labelTextRequest.TextFieldValue }
-    //    };
-    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    //}
-
-    //[Action("Set label number field", Description = "Set label number field")]
-    //public async Task SetLabelNumber(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest,
-    //    [ActionParameter] SetLabelNumberRequest labelNumberRequest)
-    //{
-    //    var labelFieldModification = new LabelFieldModification()
-    //    {
-    //        FieldId = labelNumberRequest.FieldId,
-    //        SetIntegerValues = new List<long?>() { labelNumberRequest.NumberFieldValue }
-    //    };
-    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    //}
-
-    //[Action("Set label date field", Description = "Set label date field")]
-    //public async Task SetLabelDate(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest,
-    //    [ActionParameter] SetLabelDateRequest labelDateRequest)
-    //{
-    //    var labelFieldModification = new LabelFieldModification()
-    //    {
-    //        FieldId = labelDateRequest.FieldId,
-    //        SetDateValues = new List<string>() { labelDateRequest.DateFieldValue.ToString("YYYY-MM-dd") }
-    //    };
-    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    //}
-
-    //[Action("Set label user field", Description = "Set label user field")]
-    //public async Task SetLabelUser(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest,
-    //    [ActionParameter] SetLabelUserRequest labelUserRequest)
-    //{
-    //    var labelFieldModification = new LabelFieldModification()
-    //    {
-    //        FieldId = labelUserRequest.FieldId,
-    //        SetUserValues = new List<string>() { labelUserRequest.UserFieldValue }
-    //    };
-    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    //}
-
-    //[Action("Set label selection field", Description = "Set label selection field")]
-    //public async Task SetLabelSelection(
-    //    [ActionParameter] GetItemRequest itemRequest,
-    //    [ActionParameter] GetLabelRequest labelsRequest,
-    //    [ActionParameter] SetLabelFieldBaseRequest labelFieldRequest,
-    //    [ActionParameter] SetLabelSelectionRequest labelSelectionRequest)
-    //{
-    //    var labelFieldModification = new LabelFieldModification()
-    //    {
-    //        FieldId = labelFieldRequest.FieldId,
-    //        SetSelectionValues = new List<string>() { labelSelectionRequest.SelectionFieldValue }
-    //    };
-    //    await SetLabelField(itemRequest.ItemId, labelsRequest.LabelId, labelFieldModification);
-    //}
-
-    //private async Task SetLabelField(string itemId, string labelId, LabelFieldModification fieldModification)
-    //{
-    //    var request = Client.Files.ModifyLabels(
-    //        new ModifyLabelsRequest()
-    //        {
-    //            LabelModifications = new List<LabelModification>() {
-    //                new LabelModification() {
-    //                    LabelId = labelId,
-    //                    FieldModifications = new List<LabelFieldModification>()
-    //                    {
-    //                        fieldModification
-    //                    }
-    //                }
-    //            },
-    //        }, itemId);
-    //    await request.ExecuteAsync();
-    //}
-
-    #endregion
 }
