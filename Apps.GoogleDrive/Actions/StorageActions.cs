@@ -17,11 +17,11 @@ using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 namespace Apps.GoogleDrive.Actions;
 
 [ActionList("Files")]
-public class FileActions : DriveInvocable
+public class StorageActions : DriveInvocable
 {
     private readonly IFileManagementClient _fileManagementClient;
 
-    public FileActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(invocationContext)
+    public StorageActions(InvocationContext invocationContext, IFileManagementClient fileManagementClient) : base(invocationContext)
     {
         _fileManagementClient = fileManagementClient;
     }
