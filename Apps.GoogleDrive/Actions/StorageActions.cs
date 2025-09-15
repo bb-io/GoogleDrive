@@ -44,7 +44,7 @@ public class StorageActions : DriveInvocable
 
     [BlueprintActionDefinition(BlueprintAction.DownloadFile)]
     [Action("Download file", Description = "Download a specific file")]
-    public async Task<FileModel> GetFile([ActionParameter] GetFilesRequest input)
+    public async Task<FileModel> GetFile([ActionParameter] DownloadFileRequest input)
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;

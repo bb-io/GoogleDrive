@@ -2,6 +2,7 @@ using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Apps.GoogleDrive.Polling.Models;
 using Apps.GoogleDrive.Polling.Models.Memory;
+using Apps.GoogleDrive.Utils;
 using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
@@ -102,7 +103,8 @@ public class PollingList : DriveInvocable
             request.PageSize = 100;
             request.PageToken = pageToken;
 
-            var result = await request.ExecuteAsync();
+            var result = await ExecuteWithErrorHandlingAsync(() =>
+           RetryHandler.ExecuteAsync(() => request.ExecuteAsync(CancellationToken.None), options: null, ct: CancellationToken.None));
             if (result.Files is { Count: > 0 })
                 allFiles.AddRange(result.Files);
 

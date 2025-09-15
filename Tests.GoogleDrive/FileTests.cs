@@ -19,7 +19,7 @@ namespace Tests.GoogleDrive
         {
             var action = new StorageActions(InvocationContext,FileManager);
 
-            var input = new GetFilesRequest { FileId = "1iZCM6o52QobQK2qPMelx9TphdkKYspnW" };
+            var input = new DownloadFileRequest { FileId = "1iZCM6o52QobQK2qPMelx9TphdkKYspnW" };
 
             var result = await action.GetFile(input);
             //1iZCM6o52QobQK2qPMelx9TphdkKYspnW  
