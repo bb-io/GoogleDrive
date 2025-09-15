@@ -19,7 +19,7 @@ namespace Tests.GoogleDrive
         {
             var polling = new PollingList(InvocationContext);
 
-            var lastInteraction = DateTime.UtcNow.AddHours(-48);
+            var lastInteraction = DateTime.UtcNow.AddDays(-10);
             var memory = new DateMemory { LastInteractionDate = lastInteraction };
 
             var pollingRequest = new PollingEventRequest<DateMemory>
@@ -30,15 +30,13 @@ namespace Tests.GoogleDrive
 
             var filter = new OnFileCreatedRequest
             {
-                FolderId = "1RFZbX3Cg5cxCuP7TFquEpZqlaQLdJWyG"
+                FolderId = "1he8_Zv_a6YW1PNarlPjBBZjT3JE4n1rj"
             };
 
             var result = await polling.OnFileCreated(pollingRequest, filter);
-            foreach (var file in result.Result.Files)
-            {
-                Console.WriteLine($"File ID: {file.Id}, Name: {file.FileName}");
-                Assert.IsNotNull(file);
-            }         
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+            Console.WriteLine(json);
+            Assert.IsNotNull(result);
         }
 
 
@@ -67,12 +65,9 @@ namespace Tests.GoogleDrive
             };
             var result = await polling.OnFileUpdated(filter, pollingRequest);
 
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+            Console.WriteLine(json);
             Assert.IsNotNull(result);
-            foreach (var file in result.Result.Files)
-            {
-                Console.WriteLine($"File ID: {file.Id}, Name: {file.FileName}");
-            }
-
         }
     }
 }
