@@ -1,16 +1,16 @@
 ﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models;
-using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
+using Apps.GoogleDrive.Utils.StreamWrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
-using Google.Apis.Drive.v3.Data;
 using Google.Apis.Upload;
 using System.IO.Pipelines;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
@@ -49,59 +49,16 @@ public class StorageActions : DriveInvocable
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
-
+        request.Fields = "id,name,mimeType,size"; // https://developers.google.com/workspace/drive/api/reference/rest/v3/files#resource:-file
+                                                  // We need size for non-Google Docs files to provide to the KnownLengthForwardingStream,
+                                                  // but size is not included in the default field set, so we must request it explicitly.
         var fileMetadata = await ExecuteWithErrorHandlingAsync(request.ExecuteAsync);
-
-        var fileName = fileMetadata.Name;
-        var mimeType = fileMetadata.MimeType;
 
         try
         {
-            // Use a Pipe to stream data from Google Drive directly into UploadAsync without buffering entire file in memory.
-            var pipe = new Pipe();
-            var writerStream = pipe.Writer.AsStream();
-            var readerStream = pipe.Reader.AsStream();
-
-            var downloadFunction = () => request.DownloadWithStatus(writerStream).ThrowOnFailure();
-
-            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-            {
-                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-
-                var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
-                fileName += _extensionMap[fileMetadata.MimeType];
-                mimeType = _mimeMap[fileMetadata.MimeType];
-
-                downloadFunction = () => exportRequest.DownloadWithStatus(writerStream).ThrowOnFailure();
-            }
-
-            var downloadTask = Task.Run(() =>
-            {
-                try
-                {
-                    // Synchronously write exported content into the writer stream.
-                    ExecuteWithErrorHandling(downloadFunction);
-                }
-                finally
-                {
-                    // Ensure writer is disposed and pipe completed so reader gets EOF.
-                    writerStream.Dispose();
-                    pipe.Writer.Complete();
-                }
-            });
-
-            // Start upload which will read from the readerStream as data becomes available
-            var uploadedFile = await _fileManagementClient.UploadAsync(readerStream, mimeType, fileName);
-
-            // Await the downloader to catch and propagate any download errors
-            await downloadTask;
-            readerStream.Dispose();
-
-            return new()
-            {
-                File = uploadedFile
-            };
+            return fileMetadata.MimeType.StartsWith("application/vnd.google-apps")
+                ? await DownloadGoogleDocsExport(fileMetadata)
+                : await DownloadFileViaStreaming(request, fileMetadata);
         }
         catch (Exception ex)
         {
@@ -283,4 +240,74 @@ public class StorageActions : DriveInvocable
         }
     }
 
+    private async Task<FileModel> DownloadGoogleDocsExport(Google.Apis.Drive.v3.Data.File fileMetadata)
+    {
+        if (!_mimeMap.TryGetValue(fileMetadata.MimeType, out var exportMime))
+            throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+
+        var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(fileMetadata.Id, exportMime));
+        var fileName = fileMetadata.Name + _extensionMap[fileMetadata.MimeType];
+
+        using var limitedStream = new LimitedMemoryStream();
+        ExecuteWithErrorHandling(() =>
+            exportRequest.DownloadWithStatus(limitedStream).ThrowOnFailure());
+
+        limitedStream.Position = 0;
+
+        return new FileModel {
+            File = await _fileManagementClient.UploadAsync(limitedStream, exportMime, fileName),
+        };
+    }
+
+    private async Task<FileModel> DownloadFileViaStreaming(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
+    {
+        if (fileMetadata.Size is null)
+            throw new PluginApplicationException("File size is not available in metadata (can't download a folder or a shortcut).");
+
+        var pipe = new Pipe();
+        var size = fileMetadata.Size.Value;
+
+        // Producer: download from Google Drive into the pipe
+        var downloadTask = Task.Run(async () =>
+        {
+            Exception? error = null;
+            try
+            {
+                // Google API will write all bytes then return
+                await fileRequest.DownloadAsync(pipe.Writer.AsStream());
+            }
+            catch (Exception ex)
+            {
+                error = ex;
+            }
+            finally
+            {
+                // Complete the writer so the reader sees EOF (or error)
+                await pipe.Writer.CompleteAsync(error);
+            }
+        });
+
+        FileReference uploadedFileReference;
+        try
+        {
+            // Consumer: upload while streaming from the pipe
+            await using var readerStream = pipe.Reader.AsStream();
+            using var knownLengthStream = new KnownLengthForwardingStream(readerStream, size);
+
+            uploadedFileReference = await _fileManagementClient
+                .UploadAsync(knownLengthStream, fileMetadata.MimeType, fileMetadata.Name);
+        }
+        finally
+        {
+            pipe.Reader.Complete();
+        }
+
+        // Ensure download finished and propagate any download error
+        await downloadTask;
+
+        return new FileModel
+        {
+            File = uploadedFileReference
+        };
+    }
 }
