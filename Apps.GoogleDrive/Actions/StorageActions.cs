@@ -55,51 +55,58 @@ public class StorageActions : DriveInvocable
         var fileName = fileMetadata.Name;
         var mimeType = fileMetadata.MimeType;
 
-        // Use a Pipe to stream data from Google Drive directly into UploadAsync without buffering entire file in memory.
-        var pipe = new Pipe();
-        var writerStream = pipe.Writer.AsStream();
-        var readerStream = pipe.Reader.AsStream();
-
-        var downloadFunction = () => request.DownloadWithStatus(writerStream).ThrowOnFailure();
-        
-        if (fileMetadata.MimeType.Contains("vnd.google-apps"))
+        try
         {
-            if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+            // Use a Pipe to stream data from Google Drive directly into UploadAsync without buffering entire file in memory.
+            var pipe = new Pipe();
+            var writerStream = pipe.Writer.AsStream();
+            var readerStream = pipe.Reader.AsStream();
 
-            var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
-            fileName += _extensionMap[fileMetadata.MimeType];
-            mimeType = _mimeMap[fileMetadata.MimeType];
+            var downloadFunction = () => request.DownloadWithStatus(writerStream).ThrowOnFailure();
 
-            downloadFunction = () => exportRequest.DownloadWithStatus(writerStream).ThrowOnFailure();
+            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
+            {
+                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
+                    throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+
+                var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
+                fileName += _extensionMap[fileMetadata.MimeType];
+                mimeType = _mimeMap[fileMetadata.MimeType];
+
+                downloadFunction = () => exportRequest.DownloadWithStatus(writerStream).ThrowOnFailure();
+            }
+
+            var downloadTask = Task.Run(() =>
+            {
+                try
+                {
+                    // Synchronously write exported content into the writer stream.
+                    ExecuteWithErrorHandling(downloadFunction);
+                }
+                finally
+                {
+                    // Ensure writer is disposed and pipe completed so reader gets EOF.
+                    writerStream.Dispose();
+                    pipe.Writer.Complete();
+                }
+            });
+
+            // Start upload which will read from the readerStream as data becomes available
+            var uploadedFile = await _fileManagementClient.UploadAsync(readerStream, mimeType, fileName);
+
+            // Await the downloader to catch and propagate any download errors
+            await downloadTask;
+            readerStream.Dispose();
+
+            return new()
+            {
+                File = uploadedFile
+            };
         }
-
-        var downloadTask = Task.Run(() =>
+        catch (Exception ex)
         {
-            try
-            {
-                // Synchronously write exported content into the writer stream.
-                ExecuteWithErrorHandling(downloadFunction);
-            }
-            finally
-            {
-                // Ensure writer is disposed and pipe completed so reader gets EOF.
-                writerStream.Dispose();
-                pipe.Writer.Complete();
-            }
-        });
-
-        // Start upload which will read from the readerStream as data becomes available
-        var uploadedFile = await _fileManagementClient.UploadAsync(readerStream, mimeType, fileName);
-
-        // Await the downloader to catch and propagate any download errors
-        await downloadTask;
-        readerStream.Dispose();
-
-        return new()
-        {
-            File = uploadedFile
-        };
+            throw new PluginApplicationException($"TEMP: Error downloading a file: {ex.Message}, stack: {ex.StackTrace?.ToString()}");
+        }
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
