@@ -12,6 +12,7 @@ using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.Upload;
+using System.IO.Pipelines;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
@@ -49,42 +50,55 @@ public class StorageActions : DriveInvocable
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
 
-        var fileMetadata = await ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync());
+        var fileMetadata = await ExecuteWithErrorHandlingAsync(request.ExecuteAsync);
 
-        byte[] data;
         var fileName = fileMetadata.Name;
         var mimeType = fileMetadata.MimeType;
 
+        // Use a Pipe to stream data from Google Drive directly into UploadAsync without buffering entire file in memory.
+        var pipe = new Pipe();
+        var writerStream = pipe.Writer.AsStream();
+        var readerStream = pipe.Reader.AsStream();
 
-        using (var stream = new MemoryStream())
+        var downloadFunction = () => request.DownloadWithStatus(writerStream).ThrowOnFailure();
+        
+        if (fileMetadata.MimeType.Contains("vnd.google-apps"))
         {
-            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-            {
-                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new PluginMisconfigurationException(
-                        $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
-                ExecuteWithErrorHandling(() => exportRequest.DownloadWithStatus(stream).ThrowOnFailure());
-                fileName += _extensionMap[fileMetadata.MimeType];
-                mimeType = _mimeMap[fileMetadata.MimeType];
-            }
-            else
-            {
-                await ExecuteWithErrorHandlingAsync<bool>(() =>
-                {
-                    ExecuteWithErrorHandling(() => request.DownloadWithStatus(stream).ThrowOnFailure());
-                    return Task.FromResult(true);
-                });
-            }  
+            if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
+                throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
 
-            data = stream.ToArray();
+            var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
+            fileName += _extensionMap[fileMetadata.MimeType];
+            mimeType = _mimeMap[fileMetadata.MimeType];
+
+            downloadFunction = () => exportRequest.DownloadWithStatus(writerStream).ThrowOnFailure();
         }
 
-        using var stream2 = new MemoryStream(data);
+        var downloadTask = Task.Run(() =>
+        {
+            try
+            {
+                // Synchronously write exported content into the writer stream.
+                ExecuteWithErrorHandling(downloadFunction);
+            }
+            finally
+            {
+                // Ensure writer is disposed and pipe completed so reader gets EOF.
+                writerStream.Dispose();
+                pipe.Writer.Complete();
+            }
+        });
+
+        // Start upload which will read from the readerStream as data becomes available
+        var uploadedFile = await _fileManagementClient.UploadAsync(readerStream, mimeType, fileName);
+
+        // Await the downloader to catch and propagate any download errors
+        await downloadTask;
+        readerStream.Dispose();
 
         return new()
         {
-            File = await _fileManagementClient.UploadAsync(stream2, mimeType, fileName)
+            File = uploadedFile
         };
     }
 
