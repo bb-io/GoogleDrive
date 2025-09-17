@@ -12,7 +12,6 @@ using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
 using Google.Apis.Upload;
-using System.IO.Pipelines;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Actions;
@@ -259,55 +258,17 @@ public class StorageActions : DriveInvocable
         };
     }
 
-    private async Task<FileModel> DownloadFileViaStreaming(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
+    private Task<FileModel> DownloadFileViaStreaming(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
     {
-        if (fileMetadata.Size is null)
-            throw new PluginApplicationException("File size is not available in metadata (can't download a folder or a shortcut).");
+        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
+        var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value ?? string.Empty;
 
-        var pipe = new Pipe();
-        var size = fileMetadata.Size.Value;
+        var downloadRequest = new HttpRequestMessage(HttpMethod.Get, fileUrl);
+        downloadRequest.Headers.Authorization = new("Bearer", token);
 
-        // Producer: download from Google Drive into the pipe
-        var downloadTask = Task.Run(async () =>
+        return Task.FromResult(new FileModel
         {
-            Exception? error = null;
-            try
-            {
-                // Google API will write all bytes then return
-                await fileRequest.DownloadAsync(pipe.Writer.AsStream());
-            }
-            catch (Exception ex)
-            {
-                error = ex;
-            }
-            finally
-            {
-                // Complete the writer so the reader sees EOF (or error)
-                await pipe.Writer.CompleteAsync(error);
-            }
+            File = new FileReference(downloadRequest, fileMetadata.Name, fileMetadata.MimeType),
         });
-
-        FileReference uploadedFileReference;
-        try
-        {
-            // Consumer: upload while streaming from the pipe
-            await using var readerStream = pipe.Reader.AsStream();
-            using var knownLengthStream = new KnownLengthForwardingStream(readerStream, size);
-
-            uploadedFileReference = await _fileManagementClient
-                .UploadAsync(knownLengthStream, fileMetadata.MimeType, fileMetadata.Name);
-        }
-        finally
-        {
-            pipe.Reader.Complete();
-        }
-
-        // Ensure download finished and propagate any download error
-        await downloadTask;
-
-        return new FileModel
-        {
-            File = uploadedFileReference
-        };
     }
 }
