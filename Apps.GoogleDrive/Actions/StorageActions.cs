@@ -2,7 +2,6 @@
 using Apps.GoogleDrive.Models;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
-using Apps.GoogleDrive.Utils.StreamWrappers;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
@@ -48,21 +47,12 @@ public class StorageActions : DriveInvocable
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
-        request.Fields = "id,name,mimeType,size"; // https://developers.google.com/workspace/drive/api/reference/rest/v3/files#resource:-file
-                                                  // We need size for non-Google Docs files to provide to the KnownLengthForwardingStream,
-                                                  // but size is not included in the default field set, so we must request it explicitly.
+
         var fileMetadata = await ExecuteWithErrorHandlingAsync(request.ExecuteAsync);
 
-        try
-        {
-            return fileMetadata.MimeType.StartsWith("application/vnd.google-apps")
-                ? await DownloadGoogleDocsExport(fileMetadata)
-                : await DownloadFileViaStreaming(request, fileMetadata);
-        }
-        catch (Exception ex)
-        {
-            throw new PluginApplicationException($"TEMP: Error downloading a file: {ex.Message}, stack: {ex.StackTrace?.ToString()}");
-        }
+        return fileMetadata.MimeType.StartsWith("application/vnd.google-apps")
+            ? await DownloadGoogleDocsExport(fileMetadata)
+            : await DownloadFileViaPlatform(request, fileMetadata);
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
@@ -247,18 +237,19 @@ public class StorageActions : DriveInvocable
         var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(fileMetadata.Id, exportMime));
         var fileName = fileMetadata.Name + _extensionMap[fileMetadata.MimeType];
 
-        using var limitedStream = new LimitedMemoryStream();
-        ExecuteWithErrorHandling(() =>
-            exportRequest.DownloadWithStatus(limitedStream).ThrowOnFailure());
+        // Exports are limited to 10MB, so it's safe to use a MemoryStream here
+        using var stream = new MemoryStream();
 
-        limitedStream.Position = 0;
+        ExecuteWithErrorHandling(() => exportRequest.DownloadWithStatus(stream).ThrowOnFailure());
+
+        stream.Position = 0;
 
         return new FileModel {
-            File = await _fileManagementClient.UploadAsync(limitedStream, exportMime, fileName),
+            File = await _fileManagementClient.UploadAsync(stream, exportMime, fileName),
         };
     }
 
-    private Task<FileModel> DownloadFileViaStreaming(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
+    private Task<FileModel> DownloadFileViaPlatform(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
     {
         var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
         var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value ?? string.Empty;
