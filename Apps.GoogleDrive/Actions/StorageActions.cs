@@ -229,7 +229,8 @@ public class StorageActions : DriveInvocable
         }
     }
 
-    private async Task<FileModel> DownloadGoogleDocsExport(Google.Apis.Drive.v3.Data.File fileMetadata)
+    private async Task<FileModel> DownloadGoogleDocsExport(
+        Google.Apis.Drive.v3.Data.File fileMetadata)
     {
         if (!_mimeMap.TryGetValue(fileMetadata.MimeType, out var exportMime))
             throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
@@ -249,10 +250,13 @@ public class StorageActions : DriveInvocable
         };
     }
 
-    private Task<FileModel> DownloadFileViaPlatform(Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest, Google.Apis.Drive.v3.Data.File fileMetadata)
+    private Task<FileModel> DownloadFileViaPlatform(
+        Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest,
+        Google.Apis.Drive.v3.Data.File fileMetadata)
     {
         var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
-        var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value ?? string.Empty;
+        var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value
+            ?? throw new PluginApplicationException("Can't create a download request.");
 
         var downloadRequest = new HttpRequestMessage(HttpMethod.Get, fileUrl);
         downloadRequest.Headers.Authorization = new("Bearer", token);
