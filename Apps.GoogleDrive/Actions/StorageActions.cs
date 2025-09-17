@@ -1,16 +1,15 @@
 ﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models;
-using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Actions;
 using Blackbird.Applications.Sdk.Common.Exceptions;
+using Blackbird.Applications.Sdk.Common.Files;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
-using Google.Apis.Drive.v3.Data;
 using Google.Apis.Upload;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -49,43 +48,11 @@ public class StorageActions : DriveInvocable
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
         request.SupportsAllDrives = true;
 
-        var fileMetadata = await ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync());
+        var fileMetadata = await ExecuteWithErrorHandlingAsync(request.ExecuteAsync);
 
-        byte[] data;
-        var fileName = fileMetadata.Name;
-        var mimeType = fileMetadata.MimeType;
-
-
-        using (var stream = new MemoryStream())
-        {
-            if (fileMetadata.MimeType.Contains("vnd.google-apps"))
-            {
-                if (!_mimeMap.ContainsKey(fileMetadata.MimeType))
-                    throw new PluginMisconfigurationException(
-                        $"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
-                var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(input.FileId, _mimeMap[fileMetadata.MimeType]));
-                ExecuteWithErrorHandling(() => exportRequest.DownloadWithStatus(stream).ThrowOnFailure());
-                fileName += _extensionMap[fileMetadata.MimeType];
-                mimeType = _mimeMap[fileMetadata.MimeType];
-            }
-            else
-            {
-                await ExecuteWithErrorHandlingAsync<bool>(() =>
-                {
-                    ExecuteWithErrorHandling(() => request.DownloadWithStatus(stream).ThrowOnFailure());
-                    return Task.FromResult(true);
-                });
-            }  
-
-            data = stream.ToArray();
-        }
-
-        using var stream2 = new MemoryStream(data);
-
-        return new()
-        {
-            File = await _fileManagementClient.UploadAsync(stream2, mimeType, fileName)
-        };
+        return fileMetadata.MimeType.StartsWith("application/vnd.google-apps")
+            ? await DownloadGoogleDocsExport(fileMetadata)
+            : await DownloadFileViaPlatform(request, fileMetadata);
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
@@ -262,4 +229,41 @@ public class StorageActions : DriveInvocable
         }
     }
 
+    private async Task<FileModel> DownloadGoogleDocsExport(
+        Google.Apis.Drive.v3.Data.File fileMetadata)
+    {
+        if (!_mimeMap.TryGetValue(fileMetadata.MimeType, out var exportMime))
+            throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
+
+        var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(fileMetadata.Id, exportMime));
+        var fileName = fileMetadata.Name + _extensionMap[fileMetadata.MimeType];
+
+        // Exports are limited to 10MB, so it's safe to use a MemoryStream here
+        using var stream = new MemoryStream();
+
+        ExecuteWithErrorHandling(() => exportRequest.DownloadWithStatus(stream).ThrowOnFailure());
+
+        stream.Position = 0;
+
+        return new FileModel {
+            File = await _fileManagementClient.UploadAsync(stream, exportMime, fileName),
+        };
+    }
+
+    private Task<FileModel> DownloadFileViaPlatform(
+        Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest,
+        Google.Apis.Drive.v3.Data.File fileMetadata)
+    {
+        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
+        var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value
+            ?? throw new PluginApplicationException("Can't create a download request.");
+
+        var downloadRequest = new HttpRequestMessage(HttpMethod.Get, fileUrl);
+        downloadRequest.Headers.Authorization = new("Bearer", token);
+
+        return Task.FromResult(new FileModel
+        {
+            File = new FileReference(downloadRequest, fileMetadata.Name, fileMetadata.MimeType),
+        });
+    }
 }
