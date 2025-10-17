@@ -49,7 +49,7 @@ public class FolderActions : DriveInvocable
         };
     }
 
-    [Action("Get folder information", Description = "Get folder information, including its parent folder ID, using the folder ID")]
+    [Action("Get folder information", Description = "Get folder information from folder ID")]
     public async Task<GetFolderByIdResponse> GetFolderById([ActionParameter] GetFolderByIdRequest input)
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FolderId));

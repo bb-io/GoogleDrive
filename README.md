@@ -39,6 +39,7 @@ Before you can connect you need to make sure that:
 
 - **Create folder** Create a folder in Google Drive.
 - **Check folder exists** Given a folder name and a parent folder, checks if a folder with the same name exists.
+- **Get folder information** Get folder information from folder ID
 
 ### Labels
 
