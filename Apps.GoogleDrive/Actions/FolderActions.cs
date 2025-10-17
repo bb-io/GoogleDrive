@@ -1,5 +1,6 @@
 ﻿using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models;
+using Apps.GoogleDrive.Models.Folder;
 using Apps.GoogleDrive.Models.Label.Responses;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
@@ -10,6 +11,7 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
+using Google.Apis.Drive.v3;
 using Google.Apis.Drive.v3.Data;
 using Google.Apis.Upload;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
@@ -45,6 +47,41 @@ public class FolderActions : DriveInvocable
             FolderID = response.Id,
             FolderName = response.Name
         };
+    }
+
+    [Action("Get folder information", Description = "Get folder information, including its parent folder ID, using the folder ID")]
+    public async Task<GetFolderByIdResponse> GetFolderById([ActionParameter] GetFolderByIdRequest input)
+    {
+        var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FolderId));
+        request.SupportsAllDrives = true;
+        request.Fields = "id, name, mimeType, parents, webViewLink, createdTime, modifiedTime, size";
+        var folder = ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync())
+                     .GetAwaiter()
+                     .GetResult();
+        
+        if (folder.MimeType != "application/vnd.google-apps.folder")
+            throw new PluginMisconfigurationException($"The provided ID ({input.FolderId}) does not correspond to a folder.");
+
+        string? parentFolderId = folder.Parents?.FirstOrDefault();
+
+        var mapped = new Apps.GoogleDrive.Models.Folder.FolderInfo
+        {
+            Id = folder.Id,
+            Name = folder.Name,
+            ParentFolderId = parentFolderId,
+            WebViewLink = folder.WebViewLink,
+            CreatedTime = folder.CreatedTime,
+            ModifiedTime = folder.ModifiedTime,
+            Size = folder.Size
+        };
+
+        return new()
+        {
+            FolderInfo = mapped,
+            Found = true
+        };
+
+        
     }
 
     [Action("Check folder exists", Description = "Given a folder name and a parent folder, checks if a folder with the same name exists")]
