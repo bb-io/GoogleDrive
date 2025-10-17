@@ -77,8 +77,7 @@ public class FolderActions : DriveInvocable
 
         return new()
         {
-            FolderInfo = mapped,
-            Found = true
+            FolderInfo = mapped
         };
 
         
