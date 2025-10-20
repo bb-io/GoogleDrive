@@ -30,7 +30,7 @@ namespace Tests.GoogleDrive
 
             var filter = new OnFileCreatedRequest
             {
-                FolderId = "1he8_Zv_a6YW1PNarlPjBBZjT3JE4n1rj"
+                FolderId = "18NHObUqsUWo9PV3CdU8QpvuUAmYEtWnz"
             };
 
             var result = await polling.OnFileCreated(pollingRequest, filter);

@@ -51,5 +51,24 @@ namespace Tests.GoogleDrive
 
             Assert.IsTrue(true);
         }
+
+        [TestMethod]
+        public async Task SearchFilesTest()
+        {
+            var action = new StorageActions(InvocationContext, FileManager);
+
+            var input = new SearchFilesRequest { FolderId = "18NHObUqsUWo9PV3CdU8QpvuUAmYEtWnz" };
+
+            var result = await action.SearchFilesAsync(input);
+            var json = Newtonsoft.Json.JsonConvert.SerializeObject(result);
+            Console.WriteLine($"Files found:{result.Files.Count()}");
+            foreach (var file in result.Files)
+            {
+                Console.WriteLine($"{file.FileName} - {file.Id} - {file.CreatedAt}");
+            }
+
+            //Console.WriteLine(json);
+            Assert.IsTrue(true);
+        }
     }
 }
