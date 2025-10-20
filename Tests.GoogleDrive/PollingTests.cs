@@ -19,7 +19,7 @@ namespace Tests.GoogleDrive
         {
             var polling = new PollingList(InvocationContext);
 
-            var lastInteraction = DateTime.UtcNow.AddDays(-10);
+            var lastInteraction = DateTime.UtcNow.AddDays(-5);
             var memory = new DateMemory { LastInteractionDate = lastInteraction };
 
             var pollingRequest = new PollingEventRequest<DateMemory>
