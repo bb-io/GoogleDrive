@@ -19,7 +19,7 @@ namespace Tests.GoogleDrive
         {
             var polling = new PollingList(InvocationContext);
 
-            var lastInteraction = DateTime.UtcNow.AddDays(-5);
+            var lastInteraction = DateTime.UtcNow.AddHours(-2);
             var memory = new DateMemory { LastInteractionDate = lastInteraction };
 
             var pollingRequest = new PollingEventRequest<DateMemory>
@@ -30,7 +30,8 @@ namespace Tests.GoogleDrive
 
             var filter = new OnFileCreatedRequest
             {
-                FolderId = "18NHObUqsUWo9PV3CdU8QpvuUAmYEtWnz"
+                //FolderId = "1-2eaBDlwP-8MbgLqlKnSWCl8RJe3vTEU"
+                FolderId = "1he8_Zv_a6YW1PNarlPjBBZjT3JE4n1rj"
             };
 
             var result = await polling.OnFileCreated(pollingRequest, filter);
