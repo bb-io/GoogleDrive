@@ -7,13 +7,14 @@ using Apps.GoogleDrive.DataSourceHandler;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
 using Blackbird.Applications.Sdk.Common.Files;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 
 namespace Apps.GoogleDrive.Models.Storage.Requests
 {
     public class UpdateFileRequest
     {
         [Display("File ID")]
-        [DataSource(typeof(FileDataHandler))]
+        [FileDataSource(typeof(FilePickerDataSourceHandler))]
         public string FileId { get; set; }
 
         [Display("New file content")]

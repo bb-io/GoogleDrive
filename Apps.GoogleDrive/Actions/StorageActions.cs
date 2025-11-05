@@ -103,7 +103,7 @@ public class StorageActions : DriveInvocable
     [Action("Search files", Description = "Search files by specific criteria")]
     public async Task<SearchFilesResponse> SearchFilesAsync([ActionParameter] SearchFilesRequest input)
     {
-        var query = "mimeType != 'application/vnd.google-apps.folder'";
+        var query = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
         
         if (!string.IsNullOrEmpty(input.FolderId))
         {
