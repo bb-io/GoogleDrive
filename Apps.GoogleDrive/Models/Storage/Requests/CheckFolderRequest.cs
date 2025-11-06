@@ -1,6 +1,7 @@
 ﻿using Apps.GoogleDrive.DataSourceHandler;
 using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Dynamic;
+using Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems;
 
 namespace Apps.GoogleDrive.Models.Storage.Requests
 {
@@ -10,7 +11,7 @@ namespace Apps.GoogleDrive.Models.Storage.Requests
         public string FolderName { get; set; }
 
         [Display("Parent folder")]
-        [DataSource(typeof(FolderDataHandler))]
+        [FileDataSource(typeof(FolderPickerDataSourceHandler))]
         public string ParentFolderId { get; set; }
     }
 }
