@@ -13,12 +13,59 @@ namespace Apps.GoogleDrive.DataSourceHandler
         private const string RootFolderDisplayName = "My Drive";
         private const string FolderMime = "application/vnd.google-apps.folder";
 
+        private const string SharedWithMeId = "__shared__";
+        private const string SharedWithMeDisplayName = "Shared with me";
+
         public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(
             FolderContentDataSourceContext context,
             CancellationToken cancellationToken)
         {
             var result = new List<FileDataItem>();
             var folderId = string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId;
+
+            if (folderId == "root")
+            {
+                result.Add(new Folder
+                {
+                    Id = SharedWithMeId,
+                    DisplayName = SharedWithMeDisplayName,
+                    Date = null,
+                    IsSelectable = true
+                });
+            }
+
+            if (folderId == SharedWithMeId)
+            {
+                var sharedItems = await ListSharedWithMeItemsAsync(cancellationToken);
+
+                foreach (var item in sharedItems)
+                {
+                    var isFolder = string.Equals(item.MimeType, FolderMime, StringComparison.OrdinalIgnoreCase);
+                    if (isFolder)
+                    {
+                        result.Add(new Folder
+                        {
+                            Id = item.Id,
+                            DisplayName = item.Name,
+                            Date = item.CreatedTime,
+                            IsSelectable = true
+                        });
+                    }
+                    else
+                    {
+                        result.Add(new FileItem
+                        {
+                            Id = item.Id,
+                            DisplayName = item.Name,
+                            Date = item.ModifiedTime ?? item.CreatedTime,
+                            Size = item.Size,
+                            IsSelectable = true
+                        });
+                    }
+                }
+
+                return result;
+            }
 
             var sourceItems = await ListItemsInFolderByIdAsync(folderId, cancellationToken);
 
@@ -59,9 +106,18 @@ namespace Apps.GoogleDrive.DataSourceHandler
             if (string.IsNullOrEmpty(context?.FileDataItemId))
             {
                 return new List<FolderPathItem>
+                {
+                    new() { DisplayName = RootFolderDisplayName, Id = "root" }
+                };
+            }
+
+            if (context.FileDataItemId == SharedWithMeId)
             {
-                new() { DisplayName = RootFolderDisplayName, Id = "root" }
-            };
+                return new List<FolderPathItem>
+                {
+                    new() { DisplayName = RootFolderDisplayName, Id = "root" },
+                    new() { DisplayName = SharedWithMeDisplayName, Id = SharedWithMeId }
+                };
             }
 
             var result = new List<FolderPathItem>();
@@ -105,6 +161,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
 
             return result;
         }
+
         private async Task<IList<Google.Apis.Drive.v3.Data.File>> ListItemsInFolderByIdAsync(
             string folderId,
             CancellationToken ct)
@@ -116,6 +173,34 @@ namespace Apps.GoogleDrive.DataSourceHandler
             {
                 var req = Client.Files.List();
                 req.Q = $"'{folderId}' in parents and trashed = false";
+                req.IncludeItemsFromAllDrives = true;
+                req.SupportsAllDrives = true;
+                req.Spaces = "drive";
+                req.Fields = "nextPageToken, files(id, name, mimeType, size, parents, createdTime, modifiedTime)";
+                req.PageSize = 100;
+                req.PageToken = pageToken;
+
+                var resp = await req.ExecuteAsync(ct);
+
+                if (resp.Files is { Count: > 0 })
+                    files.AddRange(resp.Files);
+
+                pageToken = resp.NextPageToken;
+            } while (!string.IsNullOrEmpty(pageToken));
+
+            return files;
+        }
+
+        private async Task<IList<Google.Apis.Drive.v3.Data.File>> ListSharedWithMeItemsAsync(
+            CancellationToken ct)
+        {
+            var files = new List<Google.Apis.Drive.v3.Data.File>();
+            string? pageToken = null;
+
+            do
+            {
+                var req = Client.Files.List();
+                req.Q = "sharedWithMe = true and trashed = false";
                 req.IncludeItemsFromAllDrives = true;
                 req.SupportsAllDrives = true;
                 req.Spaces = "drive";
