@@ -138,7 +138,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var path = new List<FolderPathItem>
                     {
-                        new() { DisplayName = SharedWithMeDisplay, Id = SharedWithMeVirtualId }
+                       new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                     };
 
                     var parentId = current.Parents?.FirstOrDefault();
