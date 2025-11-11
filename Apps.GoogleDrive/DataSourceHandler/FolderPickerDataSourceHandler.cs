@@ -80,7 +80,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     .ToList();
             }
 
- 
+
             var children = await ListItemsInFolderByIdAsync(folderId, cancellationToken);
             return children
                 .Where(f => string.Equals(f.MimeType, FolderMime, StringComparison.OrdinalIgnoreCase))
@@ -111,7 +111,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var drive = await GetDriveAsync(current.DriveId, cancellationToken);
                     var path = new List<FolderPathItem>
-                    { 
+                    {
                         new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                         new() { DisplayName = SharedDrivesDisplay, Id = SharedDrivesVirtualId },
                         new() { DisplayName = drive.Name, Id = $"d:{drive.Id}" }
@@ -154,7 +154,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var path = new List<FolderPathItem>
                     {
-                        new() { DisplayName = HomeDisplay, Id = HomeVirtualId },                
+                        new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                     };
 
                     var parentId = current.Parents?.FirstOrDefault();
