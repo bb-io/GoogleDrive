@@ -7,107 +7,147 @@ namespace Apps.GoogleDrive.DataSourceHandler
 {
     public class FolderPickerDataSourceHandler(InvocationContext invocationContext) : DriveInvocable(invocationContext), IAsyncFileDataSourceItemHandler
     {
-        private const string RootFolderDisplayName = "My Drive";
+        private const string VMyDrive = "__VIRTUAL_MY_DRIVE__";
+        private const string VShared = "__VIRTUAL_SHARED__";
+
+        private const string MyDriveDisplay = "My Drive";
+        private const string SharedDisplay = "Shared Drives";
+
         private const string FolderMime = "application/vnd.google-apps.folder";
+        private const string ShortcutMime = "application/vnd.google-apps.shortcut";
 
-        public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken cancellationToken)
+        public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(
+            FolderContentDataSourceContext context, CancellationToken ct)
         {
-            var folderId = string.IsNullOrEmpty(context.FolderId) ? "root" : context.FolderId;
+            var folderId = context?.FolderId;
 
-            if (folderId == "root")
+            if (string.IsNullOrEmpty(folderId))
             {
-                var myDriveChildren = await ListItemsInFolderByIdAsync("root", cancellationToken);
-                var sharedFolders = await ListSharedWithMeFoldersAsync(cancellationToken);
-
-                var myDriveFolders = myDriveChildren
-                    .Where(f => string.Equals(f.MimeType, FolderMime, StringComparison.OrdinalIgnoreCase));
-
-                var byId = new Dictionary<string, Google.Apis.Drive.v3.Data.File>();
-                foreach (var f in myDriveFolders) byId[f.Id] = f;
-                foreach (var f in sharedFolders) byId[f.Id] = f;
-
-                return byId.Values
-                    .Select(f => new Folder
-                    {
-                        Id = f.Id,
-                        DisplayName = f.Name,
-                        Date = f.CreatedTime,
-                        IsSelectable = true
-                    })
-                    .Cast<FileDataItem>()
-                    .ToList();
-            }
-
-            var items = await ListItemsInFolderByIdAsync(folderId, cancellationToken);
-
-            var onlyFolders = items
-                .Where(f => string.Equals(f.MimeType, FolderMime, StringComparison.OrdinalIgnoreCase))
-                .Select(f => new Folder
+                return new FileDataItem[]
                 {
-                    Id = f.Id,
-                    DisplayName = f.Name,
-                    Date = f.CreatedTime,
-                    IsSelectable = true
-                })
-                .Cast<FileDataItem>()
-                .ToList();
-
-            return onlyFolders;
-        }
-
-        public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrEmpty(context?.FileDataItemId))
-            {
-                return new List<FolderPathItem>
-                {
-                    new() { DisplayName = RootFolderDisplayName, Id = "root" }
+                    new Folder { Id = VMyDrive, DisplayName = MyDriveDisplay, IsSelectable = false },
+                    new Folder { Id = VShared,  DisplayName = SharedDisplay,  IsSelectable = false }
                 };
             }
 
-            var result = new List<FolderPathItem>();
+            if (folderId == VMyDrive)
+            {
+                var items = await ListPagedAsync(
+                    q: "trashed = false",
+                    corpora: "user",
+                    ct: ct);
 
+                return MapFilesAndFolders(items);
+            }
+
+            if (folderId == VShared)
+            {
+                var items = await ListPagedAsync(
+                    q: "trashed = false AND sharedWithMe = true",
+                    corpora: "user",
+                    ct: ct);
+
+                return MapFilesAndFolders(items);
+            }
+
+            var children = await ListPagedAsync(
+                q: $"'{folderId}' in parents and trashed = false",
+                corpora: "allDrives",
+                ct: ct);
+
+            return MapFilesAndFolders(children);
+        }
+
+        public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(
+            FolderPathDataSourceContext context, CancellationToken ct)
+        {
+            var id = context?.FileDataItemId;
+            if (string.IsNullOrEmpty(id))
+                return new[] { new FolderPathItem { DisplayName = MyDriveDisplay, Id = VMyDrive } };
+
+            if (id == VMyDrive) return new[] { new FolderPathItem { DisplayName = MyDriveDisplay, Id = VMyDrive } };
+            if (id == VShared) return new[] { new FolderPathItem { DisplayName = SharedDisplay, Id = VShared } };
+
+            var result = new List<FolderPathItem>();
             try
             {
-                var current = await GetFileMetadataByIdAsync(context.FileDataItemId!, cancellationToken);
+                var current = await GetFileMetaAsync(id, ct);
+
+                var isMine = current.OwnedByMe == true;
+                var isShared = current.Shared == true && !isMine;
+
+                result.Add(new FolderPathItem
+                {
+                    DisplayName = isMine ? MyDriveDisplay : SharedDisplay,
+                    Id = isMine ? VMyDrive : VShared
+                });
+
+                var stack = new Stack<FolderPathItem>();
                 var parentId = current.Parents?.FirstOrDefault();
 
                 while (!string.IsNullOrEmpty(parentId))
                 {
-                    var parent = await GetFileMetadataByIdAsync(parentId!, cancellationToken);
-
-                    result.Insert(0, new FolderPathItem
-                    {
-                        DisplayName = parent.Name,
-                        Id = parent.Id
-                    });
-
-                    if (string.Equals(parentId, "root", StringComparison.Ordinal))
-                        break;
-
+                    var parent = await GetFileMetaAsync(parentId!, ct);
+                    stack.Push(new FolderPathItem { DisplayName = parent.Name, Id = parent.Id });
                     parentId = parent.Parents?.FirstOrDefault();
                 }
 
-                if (result.Count == 0 || !string.Equals(result[0].Id, "root", StringComparison.Ordinal))
-                {
-                    result.Insert(0, new FolderPathItem { DisplayName = RootFolderDisplayName, Id = "root" });
-                }
-                else
-                {
-                    result[0].DisplayName = RootFolderDisplayName;
-                    result[0].Id = "root";
-                }
+                while (stack.Count > 0) result.Add(stack.Pop());
             }
             catch
             {
                 result.Clear();
-                result.Add(new FolderPathItem { DisplayName = RootFolderDisplayName, Id = "root" });
+                result.Add(new FolderPathItem { DisplayName = MyDriveDisplay, Id = VMyDrive });
             }
 
             return result;
         }
 
-        private async Task<IList<Google.Apis.Drive.v3.Data.File>> ListItemsInFolderByIdAsync(string folderId, CancellationToken ct)
+        private IEnumerable<FileDataItem> MapFilesAndFolders(IEnumerable<Google.Apis.Drive.v3.Data.File> items)
+        {
+            var list = new List<FileDataItem>();
+            foreach (var f in items)
+            {
+                var (id, mime) = ResolveShortcut(f);
+                var isFolder = string.Equals(mime, FolderMime, StringComparison.OrdinalIgnoreCase);
+
+                if (isFolder)
+                {
+                    list.Add(new Folder
+                    {
+                        Id = id,
+                        DisplayName = f.Name,
+                        Date = f.CreatedTime,
+                        IsSelectable = false
+                    });
+                }
+                else
+                {
+                    list.Add(new Blackbird.Applications.SDK.Extensions.FileManagement.Models.FileDataSourceItems.File
+                    {
+                        Id = id,
+                        DisplayName = f.Name,
+                        Date = f.ModifiedTime ?? f.CreatedTime,
+                        Size = f.Size,
+                        IsSelectable = true
+                    });
+                }
+            }
+            return list;
+        }
+
+        private static (string id, string mime) ResolveShortcut(Google.Apis.Drive.v3.Data.File f)
+        {
+            if (string.Equals(f.MimeType, ShortcutMime, StringComparison.OrdinalIgnoreCase) &&
+                f.ShortcutDetails?.TargetId is { } tid &&
+                !string.IsNullOrEmpty(f.ShortcutDetails.TargetMimeType))
+            {
+                return (tid, f.ShortcutDetails.TargetMimeType);
+            }
+            return (f.Id, f.MimeType);
+        }
+
+        private async Task<IList<Google.Apis.Drive.v3.Data.File>> ListPagedAsync(string q, string corpora, CancellationToken ct)
         {
             var files = new List<Google.Apis.Drive.v3.Data.File>();
             string? pageToken = null;
@@ -115,16 +155,21 @@ namespace Apps.GoogleDrive.DataSourceHandler
             do
             {
                 var req = Client.Files.List();
-                req.Q = $"'{folderId}' in parents and trashed = false";
+                req.Q = q;
+                req.Corpora = corpora;
                 req.IncludeItemsFromAllDrives = true;
                 req.SupportsAllDrives = true;
                 req.Spaces = "drive";
-                req.Fields = "nextPageToken, files(id, name, mimeType, size, parents, createdTime, modifiedTime)";
                 req.PageSize = 100;
                 req.PageToken = pageToken;
+                req.Fields =
+                    "nextPageToken, files(" +
+                    "id, name, mimeType, size, parents, createdTime, modifiedTime, " +
+                    "ownedByMe, shared, driveId, " +
+                    "shortcutDetails(targetId,targetMimeType)" +
+                    ")";
 
                 var resp = await req.ExecuteAsync(ct);
-
                 if (resp.Files is { Count: > 0 })
                     files.AddRange(resp.Files);
 
@@ -134,38 +179,14 @@ namespace Apps.GoogleDrive.DataSourceHandler
             return files;
         }
 
-        private async Task<IList<Google.Apis.Drive.v3.Data.File>> ListSharedWithMeFoldersAsync(CancellationToken ct)
+        private async Task<Google.Apis.Drive.v3.Data.File> GetFileMetaAsync(string id, CancellationToken ct)
         {
-            var files = new List<Google.Apis.Drive.v3.Data.File>();
-            string? pageToken = null;
-
-            do
-            {
-                var req = Client.Files.List();
-                req.Q = $"sharedWithMe = true and trashed = false and mimeType = '{FolderMime}'";
-                req.IncludeItemsFromAllDrives = true;
-                req.SupportsAllDrives = true;
-                req.Spaces = "drive";
-                req.Fields = "nextPageToken, files(id, name, mimeType, size, parents, createdTime, modifiedTime)";
-                req.PageSize = 100;
-                req.PageToken = pageToken;
-
-                var resp = await req.ExecuteAsync(ct);
-
-                if (resp.Files is { Count: > 0 })
-                    files.AddRange(resp.Files);
-
-                pageToken = resp.NextPageToken;
-            } while (!string.IsNullOrEmpty(pageToken));
-
-            return files;
-        }
-
-        private async Task<Google.Apis.Drive.v3.Data.File> GetFileMetadataByIdAsync(string fileId, CancellationToken ct)
-        {
-            var req = Client.Files.Get(fileId);
+            var req = Client.Files.Get(id);
             req.SupportsAllDrives = true;
-            req.Fields = "id, name, mimeType, size, parents, createdTime, modifiedTime";
+            req.Fields =
+                "id, name, mimeType, size, parents, createdTime, modifiedTime, " +
+                "ownedByMe, shared, driveId, " +
+                "shortcutDetails(targetId,targetMimeType)";
             return await req.ExecuteAsync(ct);
         }
     }

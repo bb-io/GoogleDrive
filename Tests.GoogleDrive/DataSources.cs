@@ -23,6 +23,20 @@ namespace Tests.GoogleDrive
         }
 
         [TestMethod]
+        public async Task FolderDataHandlerReturnsValues()
+        {
+            var handler = new FolderDataHandler(InvocationContext);
+
+            var response = handler.GetData(new DataSourceContext { SearchString = "" });
+
+            foreach (var file in response)
+            {
+                Console.WriteLine($"{file.Key} - {file.Value}");
+            }
+            Assert.IsNotNull(response);
+        }
+
+        [TestMethod]
         public async Task FilePickerDataHandler_IsSuccess()
         {
             var handler = new FilePickerDataSourceHandler(InvocationContext);
