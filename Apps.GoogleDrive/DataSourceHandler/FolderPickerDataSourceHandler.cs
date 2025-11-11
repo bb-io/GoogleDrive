@@ -23,7 +23,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
 
         public async Task<IEnumerable<FileDataItem>> GetFolderContentAsync(FolderContentDataSourceContext context, CancellationToken cancellationToken)
         {
-            var folderId = string.IsNullOrEmpty(context.FolderId) ? string.Empty : context.FolderId;
+            var folderId = string.IsNullOrEmpty(context.FolderId) ? HomeVirtualId : context.FolderId;
 
             if (folderId == HomeVirtualId)
             {
@@ -97,11 +97,11 @@ namespace Apps.GoogleDrive.DataSourceHandler
             var id = context.FileDataItemId;
 
             if (id == MyDriveVirtualId)
-                return new List<FolderPathItem> { new() { DisplayName = HomeDisplay, Id = HomeVirtualId }, new() { DisplayName = MyDriveDisplay, Id = MyDriveVirtualId } };
+                return new List<FolderPathItem> {  new() { DisplayName = MyDriveDisplay, Id = MyDriveVirtualId } };
             if (id == SharedDrivesVirtualId)
-                return new List<FolderPathItem> { new() { DisplayName = HomeDisplay, Id = HomeVirtualId }, new() { DisplayName = SharedDrivesDisplay, Id = SharedDrivesVirtualId } };
+                return new List<FolderPathItem> {  new() { DisplayName = SharedDrivesDisplay, Id = SharedDrivesVirtualId } };
             if (id == SharedWithMeVirtualId)
-                return new List<FolderPathItem> { new() { DisplayName = HomeDisplay, Id = HomeVirtualId }, new() { DisplayName = SharedWithMeDisplay, Id = SharedWithMeVirtualId } };
+                return new List<FolderPathItem> {  new() { DisplayName = SharedWithMeDisplay, Id = SharedWithMeVirtualId } };
 
             try
             {
@@ -112,7 +112,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     var drive = await GetDriveAsync(current.DriveId, cancellationToken);
                     var path = new List<FolderPathItem>
                     { 
-                        new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                         new() { DisplayName = SharedDrivesDisplay, Id = SharedDrivesVirtualId },
                         new() { DisplayName = drive.Name, Id = $"d:{drive.Id}" }
                     };
@@ -134,7 +133,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var path = new List<FolderPathItem>
                     {
-                        new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                         new() { DisplayName = MyDriveDisplay, Id = MyDriveVirtualId }
                     };
                     var parentId = current.Parents?.FirstOrDefault();
@@ -154,7 +152,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                 {
                     var path = new List<FolderPathItem>
                     {
-                        new() { DisplayName = HomeDisplay, Id = HomeVirtualId },
                         new() { DisplayName = SharedWithMeDisplay, Id = SharedWithMeVirtualId }
                     };
 
