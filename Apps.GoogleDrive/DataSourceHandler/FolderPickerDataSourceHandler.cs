@@ -13,6 +13,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
         private const string MyDriveVirtualId = "v:mydrive";
         private const string SharedDrivesVirtualId = "v:shared";
         private const string SharedWithMeVirtualId = "v:sharedwithme";
+        private const string HomeVirtualId = "v:home";
 
         private const string MyDriveDisplay = "My Drive";
         private const string SharedDrivesDisplay = "Shared drives";
@@ -22,7 +23,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
         {
             var folderId = string.IsNullOrEmpty(context.FolderId) ? string.Empty : context.FolderId;
 
-            if (string.IsNullOrEmpty(folderId))
+            if (string.IsNullOrEmpty(folderId) || folderId == HomeVirtualId)
             {
                 return new List<FileDataItem>
                 {
@@ -88,7 +89,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
 
         public async Task<IEnumerable<FolderPathItem>> GetFolderPathAsync(FolderPathDataSourceContext context, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrEmpty(context?.FileDataItemId))
+            if (string.IsNullOrEmpty(context?.FileDataItemId) || context.FileDataItemId == HomeVirtualId)
                 return new List<FolderPathItem>();
 
             var id = context.FileDataItemId;
@@ -123,7 +124,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
-                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
 
@@ -144,7 +144,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
-                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
                 else
@@ -172,7 +171,6 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
-                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
             }
@@ -192,6 +190,8 @@ namespace Apps.GoogleDrive.DataSourceHandler
 
         private async Task<bool> IsUnderMyDriveAsync(Google.Apis.Drive.v3.Data.File file, CancellationToken ct)
         {
+            if (file.Parents?.Contains("root") == true) return true;
+
             var parentId = file.Parents?.FirstOrDefault();
             while (!string.IsNullOrEmpty(parentId))
             {
