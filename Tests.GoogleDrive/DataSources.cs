@@ -13,7 +13,7 @@ namespace Tests.GoogleDrive
         {
             var handler = new FileDataHandler(InvocationContext);
 
-            var response =  handler.GetData(new DataSourceContext { SearchString= "Стальна" });
+            var response =  handler.GetData(new DataSourceContext { SearchString= "" });
 
             foreach (var file in response)
             {
