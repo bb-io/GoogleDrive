@@ -123,6 +123,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
+                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
 
@@ -143,6 +144,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
+                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
                 else
@@ -170,6 +172,7 @@ namespace Apps.GoogleDrive.DataSourceHandler
                     }
 
                     path.AddRange(stack);
+                    path.Add(new FolderPathItem { DisplayName = current.Name, Id = current.Id });
                     return path;
                 }
             }
