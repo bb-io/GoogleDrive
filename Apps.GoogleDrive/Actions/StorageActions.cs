@@ -57,39 +57,35 @@ public class StorageActions : DriveInvocable
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
     [Action("Upload file", Description = "Upload files")]
-    public async Task UploadFile([ActionParameter] UploadFilesRequest input)
+    public async Task<UploadFileResponse> UploadFile([ActionParameter] UploadFilesRequest input)
     {
         if (input.File.ContentType.Contains("vnd.google-apps"))
         {
-            //if (!string.IsNullOrWhiteSpace(input.SaveAs))
-            //{
-            //    input.File.ContentType = input.SaveAs;
-            //}
-            //else
-            //{
-                if (!_mimeMap.ContainsKey(input.File.ContentType))
-                    throw new PluginMisconfigurationException(
-                        $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
+            if (!_mimeMap.TryGetValue(input.File.ContentType, out string? contentType))
+                throw new PluginMisconfigurationException($"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
 
-                input.File.ContentType = _mimeMap[input.File.ContentType];
-           // }
+            input.File.ContentType = contentType;
         }
+
         var body = new Google.Apis.Drive.v3.Data.File
         {
             Name = input.File.Name,
-            Parents = new List<string> { input.ParentFolderId },
-            MimeType = String.IsNullOrEmpty(input.SaveAs)?input.File.ContentType:input.SaveAs
+            Parents = [input.ParentFolderId],
+            MimeType = String.IsNullOrEmpty(input.SaveAs) ? input.File.ContentType : input.SaveAs,
         };
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
         var request = ExecuteWithErrorHandling(() => Client.Files.Create(body, fileBytes, input.File.ContentType));
         request.SupportsAllDrives = true;
+        request.Fields = "id";
 
         var result = await ExecuteWithErrorHandling(() => request.UploadAsync());
         if (result.Status == UploadStatus.Failed)
         {
             throw new PluginApplicationException($"The file upload operation has failed. API error message: {result.Exception.Message}");
         }
+
+        return new() { Id = request.ResponseBody.Id };
     }
 
     [Action("Delete item", Description = "Delete item (file/folder)")]
