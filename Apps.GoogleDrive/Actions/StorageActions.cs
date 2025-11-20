@@ -61,24 +61,17 @@ public class StorageActions : DriveInvocable
     {
         if (input.File.ContentType.Contains("vnd.google-apps"))
         {
-            //if (!string.IsNullOrWhiteSpace(input.SaveAs))
-            //{
-            //    input.File.ContentType = input.SaveAs;
-            //}
-            //else
-            //{
-                if (!_mimeMap.ContainsKey(input.File.ContentType))
-                    throw new PluginMisconfigurationException(
-                        $"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
+            if (!_mimeMap.TryGetValue(input.File.ContentType, out string? contentType))
+                throw new PluginMisconfigurationException($"The file {input.File.Name} has type {input.File.ContentType}, which has no defined conversion");
 
-                input.File.ContentType = _mimeMap[input.File.ContentType];
-           // }
+            input.File.ContentType = contentType;
         }
+
         var body = new Google.Apis.Drive.v3.Data.File
         {
             Name = input.File.Name,
-            Parents = new List<string> { input.ParentFolderId },
-            MimeType = String.IsNullOrEmpty(input.SaveAs)?input.File.ContentType:input.SaveAs
+            Parents = [input.ParentFolderId],
+            MimeType = String.IsNullOrEmpty(input.SaveAs) ? input.File.ContentType : input.SaveAs,
         };
 
         await using var fileBytes = await _fileManagementClient.DownloadAsync(input.File);
