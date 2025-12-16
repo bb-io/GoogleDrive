@@ -29,7 +29,7 @@ public class PollingList : DriveInvocable
     public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(PollingEventRequest<DateMemory> request,
         [PollingEventParameter]OnFileCreatedRequest filter)
     {
-        return await HandleCreatedFilesPolling(request, filter.FolderId);
+        return await HandleCreatedFilesPolling(request, filter);
     }
 
     [PollingEvent("On files updated", "On any file updated in specified folder")]
@@ -88,8 +88,8 @@ public class PollingList : DriveInvocable
     }
 
     private async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> HandleCreatedFilesPolling(
-    PollingEventRequest<DateMemory> request,
-    string folderId)
+     PollingEventRequest<DateMemory> request,
+     OnFileCreatedRequest filter)
     {
         if (request.Memory is null)
         {
@@ -101,12 +101,34 @@ public class PollingList : DriveInvocable
         }
 
         var lastInteractionIso = request.Memory.LastInteractionDate
-             .ToUniversalTime()
-             .ToString("yyyy-MM-dd'T'HH':'mm':'ss.fff'Z'");
-        
-        var query = $"createdTime > '{lastInteractionIso}' and '{folderId}' in parents and trashed = false and mimeType != 'application/vnd.google-apps.folder'";
-        var items = (await SearchFilesAsync(query))
-            .ToArray();
+            .ToUniversalTime()
+            .ToString("yyyy-MM-dd'T'HH':'mm':'ss.fff'Z'");
+
+        var folderId = EscapeDriveQueryValue(filter.FolderId);
+
+        var queryParts = new List<string>
+    {
+        $"createdTime > '{lastInteractionIso}'",
+        $"'{folderId}' in parents",
+        "trashed = false",
+        "mimeType != 'application/vnd.google-apps.folder'"
+    };
+
+        if (!string.IsNullOrWhiteSpace(filter.FileNameContains))
+        {
+            var nameContains = EscapeDriveQueryValue(filter.FileNameContains.Trim());
+            queryParts.Add($"name contains '{nameContains}'");
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.MimeType))
+        {
+            var mimeType = EscapeDriveQueryValue(filter.MimeType.Trim());
+            queryParts.Add($"mimeType = '{mimeType}'");
+        }
+
+        var query = string.Join(" and ", queryParts);
+
+        var items = (await SearchFilesAsync(query)).ToArray();
 
         if (!items.Any())
         {
@@ -128,6 +150,8 @@ public class PollingList : DriveInvocable
             Memory = new() { LastInteractionDate = DateTime.UtcNow }
         };
     }
+
+    private static string EscapeDriveQueryValue(string value) => value.Replace("\\", "\\\\").Replace("'", "\\'");
 
     private async Task<List<File>> SearchFilesAsync(string query)
     {

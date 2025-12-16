@@ -31,7 +31,10 @@ namespace Tests.GoogleDrive
             var filter = new OnFileCreatedRequest
             {
                 //FolderId = "1-2eaBDlwP-8MbgLqlKnSWCl8RJe3vTEU"
-                FolderId = "1he8_Zv_a6YW1PNarlPjBBZjT3JE4n1rj"
+                FolderId = "1he8_Zv_a6YW1PNarlPjBBZjT3JE4n1rj",
+                //MimeType= "application/vnd.google-apps.spreadsheet",
+                MimeType= "image/png",
+                FileNameContains= "2026"
             };
 
             var result = await polling.OnFileCreated(pollingRequest, filter);
