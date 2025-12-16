@@ -100,43 +100,45 @@ public class StorageActions : DriveInvocable
     public async Task<SearchFilesResponse> SearchFilesAsync([ActionParameter] SearchFilesRequest input)
     {
         var query = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
-        
+
         if (!string.IsNullOrEmpty(input.FolderId))
-        {
             query += $" and '{input.FolderId}' in parents";
-        }
-        
+
         if (!string.IsNullOrEmpty(input.FileName))
-        {
             query += $" and name contains '{input.FileName}'";
-        }
-        
-        if(!string.IsNullOrEmpty(input.MimeType))
-        {
+
+        if (!string.IsNullOrEmpty(input.MimeType))
             query += $" and mimeType = '{input.MimeType}'";
-        }
 
-        var filesListResult = ExecuteWithErrorHandling(() => Client.Files.List());
-        filesListResult.IncludeItemsFromAllDrives = true;
-        filesListResult.SupportsAllDrives = true;
-        filesListResult.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
-        filesListResult.Q = query;
-        
-        if(input.Limit.HasValue)
+        var request = ExecuteWithErrorHandling(() => Client.Files.List());
+        request.IncludeItemsFromAllDrives = true;
+        request.SupportsAllDrives = true;
+        request.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
+        request.Q = query;
+
+        request.PageSize = input.Limit ?? 1000;
+
+        var allFiles = new List<FileInfo>();
+        string pageToken = null;
+
+        do
         {
-            filesListResult.PageSize = input.Limit.Value;
-        }
+            request.PageToken = pageToken;
 
-        var filesList = await ExecuteWithErrorHandlingAsync(async () => await filesListResult.ExecuteAsync());
-        var fileDtos = filesList.Files.Select(x => new FileInfo(x)).ToList();
+            var response = await ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
 
-        if (input.FileExactMatch.HasValue && input.FileExactMatch.Value && !String.IsNullOrEmpty(input.FileName))
+            if (response.Files != null)
+                allFiles.AddRange(response.Files.Select(f => new FileInfo(f)));
+
+            pageToken = response.NextPageToken;
+
+        } while (!string.IsNullOrEmpty(pageToken));
+
+        if (input.FileExactMatch == true && !string.IsNullOrEmpty(input.FileName))
         {
-            if (fileDtos.Any(x => x.FileName == input.FileName))
-            {
-                fileDtos = fileDtos.Where(x => x.FileName == input.FileName).ToList();
-            }
-            else 
+            allFiles = allFiles.Where(x => x.FileName == input.FileName).ToList();
+
+            if (!allFiles.Any())
             {
                 return new()
                 {
@@ -145,13 +147,15 @@ public class StorageActions : DriveInvocable
                 };
             }
         }
+
         return new()
         {
-            Files = fileDtos,
-            TotalCount = fileDtos.Count
+            Files = allFiles,
+            TotalCount = allFiles.Count
         };
     }
-    
+
+
     [Action("Get file information", Description = "Get file information by specific criteria")]
     public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
     {
