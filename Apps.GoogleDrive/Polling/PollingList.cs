@@ -107,12 +107,12 @@ public class PollingList : DriveInvocable
         var folderId = EscapeDriveQueryValue(filter.FolderId);
 
         var queryParts = new List<string>
-    {
-        $"createdTime > '{lastInteractionIso}'",
-        $"'{folderId}' in parents",
-        "trashed = false",
-        "mimeType != 'application/vnd.google-apps.folder'"
-    };
+        {
+            $"createdTime > '{lastInteractionIso}'",
+            $"'{folderId}' in parents",
+            "trashed = false",
+            "mimeType != 'application/vnd.google-apps.folder'"
+        };
 
         if (!string.IsNullOrWhiteSpace(filter.FileNameContains))
         {
