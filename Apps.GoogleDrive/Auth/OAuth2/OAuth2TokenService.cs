@@ -84,8 +84,11 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
-            throw new PluginMisconfigurationException($"Google OAuth token request failed. Please reconnect the connection. Details: {responseContent}");
+        {
+            InvocationContext.Logger?.LogError($"[GoogleDriveOAuth] Google OAuth token request failed. Details: {responseContent}", null);
 
+            throw new PluginMisconfigurationException($"Google OAuth token request failed. Please reconnect the connection. Details: {responseContent}");
+        }
         var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)
                                ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
                            ?? throw new PluginApplicationException($"Invalid token response: {responseContent}");

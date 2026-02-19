@@ -17,7 +17,6 @@ public class GoogleDriveActivityClient : DriveActivityService
             HttpClientInitializer = credentials,
             ApplicationName = "Blackbird"
         };
-
     }
 
     public GoogleDriveActivityClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : base(GetInitializer(authenticationCredentialsProviders)) { }

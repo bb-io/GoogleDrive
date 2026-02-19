@@ -18,7 +18,6 @@ namespace Apps.GoogleDrive.Clients
                 HttpClientInitializer = credentials,
                 ApplicationName = "Blackbird"
             };
-
         }
 
         public GoogleDriveLabelClient(IEnumerable<AuthenticationCredentialsProvider> authenticationCredentialsProviders) : base(GetInitializer(authenticationCredentialsProviders)) { }
