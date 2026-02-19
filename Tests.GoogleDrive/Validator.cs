@@ -13,6 +13,7 @@ namespace Tests.GoogleDrive
             var validator = new ConnectionValidator();
 
             var result = await validator.ValidateConnection(Creds, CancellationToken.None);
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(result));
             Assert.IsTrue(result.IsValid);
         }
 

@@ -1,6 +1,7 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using System.Text.Json;
 
@@ -75,17 +76,39 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
         CancellationToken cancellationToken)
     {
         var utcNow = DateTime.UtcNow;
-        using HttpClient httpClient = new HttpClient();
+        var logger = InvocationContext.Logger;
+
+        using var httpClient = new HttpClient();
         using var httpContent = new FormUrlEncodedContent(bodyParameters);
+
+        logger?.LogInformation("[GoogleDriveOAuth] Requesting new access token", null);
+
         using var response = await httpClient.PostAsync(TokenUrl, httpContent, cancellationToken);
-        var responseContent = await response.Content.ReadAsStringAsync();
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            logger?.LogError($"[GoogleDriveOAuth] Token request failed. Status: {response.StatusCode}. Response: {responseContent}", null);
+
+            throw new PluginMisconfigurationException($"Google OAuth token request failed. Details: {responseContent}");
+        }
+
         var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)
-                                   ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
-                               ?? throw new InvalidOperationException(
-                                   $"Invalid response content: {responseContent}");
-        var expiresIn = int.Parse(resultDictionary["expires_in"]);
-        var expiresAt = utcNow.AddSeconds(expiresIn);
-        resultDictionary.Add(ExpiresAtKeyName, expiresAt.ToString());
+                               ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
+                           ?? throw new PluginApplicationException($"Invalid token response: {responseContent}");
+
+        if (!resultDictionary.TryGetValue("access_token", out var token) || string.IsNullOrWhiteSpace(token))
+        {
+            logger?.LogError("[GoogleDriveOAuth] Access token is missing in the response.", null);
+            throw new PluginApplicationException("Token response does not contain access_token.");
+        }
+
+        if (resultDictionary.TryGetValue("expires_in", out var expiresStr) && int.TryParse(expiresStr, out var expiresIn))
+        {
+            resultDictionary[ExpiresAtKeyName] = utcNow.AddSeconds(expiresIn).ToString("O");
+        }
+
+        logger?.LogInformation("[GoogleDriveOAuth] Token successfully received and validated.", null);
         return resultDictionary;
     }
 }
