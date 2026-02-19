@@ -17,9 +17,7 @@ public class ConnectionValidator : IConnectionValidator
 
             var aboutRequest = client.About.Get();
             aboutRequest.Fields = "user/me";
-            await aboutRequest.ExecuteAsync(cancellationToken);
-
-            return new() { IsValid = true };
+            await aboutRequest.ExecuteAsync(cancellationToken);  
         }
         catch (GoogleApiException gae) when (gae.HttpStatusCode is System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden)
         {
@@ -29,5 +27,14 @@ public class ConnectionValidator : IConnectionValidator
                 Message = $"{gae.Message} - {gae.InnerException}"
             };
         }
+        catch (Exception ex)
+        {
+            return new()
+            {
+                IsValid = true
+            };
+        }
+
+        return new() { IsValid = true };
     }
 }

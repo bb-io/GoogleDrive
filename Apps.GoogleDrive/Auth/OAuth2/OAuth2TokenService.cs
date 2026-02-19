@@ -76,30 +76,39 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
         CancellationToken cancellationToken)
     {
         var utcNow = DateTime.UtcNow;
+        var logger = InvocationContext.Logger;
 
         using var httpClient = new HttpClient();
         using var httpContent = new FormUrlEncodedContent(bodyParameters);
-        using var response = await httpClient.PostAsync(TokenUrl, httpContent, cancellationToken);
 
+        logger?.LogInformation("[GoogleDriveOAuth] Requesting new access token", null);
+
+        using var response = await httpClient.PostAsync(TokenUrl, httpContent, cancellationToken);
         var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            InvocationContext.Logger?.LogError($"[GoogleDriveOAuth] Google OAuth token request failed. Details: {responseContent}", null);
+            logger?.LogError($"[GoogleDriveOAuth] Token request failed. Status: {response.StatusCode}. Response: {responseContent}", null);
 
-            throw new PluginMisconfigurationException($"Google OAuth token request failed. Please reconnect the connection. Details: {responseContent}");
+            throw new PluginMisconfigurationException($"Google OAuth token request failed. Details: {responseContent}");
         }
+
         var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)
                                ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
                            ?? throw new PluginApplicationException($"Invalid token response: {responseContent}");
 
         if (!resultDictionary.TryGetValue("access_token", out var token) || string.IsNullOrWhiteSpace(token))
-            throw new PluginApplicationException($"Token response does not contain access_token. Response: {responseContent}");
+        {
+            logger?.LogError("[GoogleDriveOAuth] Access token is missing in the response.", null);
+            throw new PluginApplicationException("Token response does not contain access_token.");
+        }
 
-        var expiresIn = int.Parse(resultDictionary["expires_in"]);
-        var expiresAt = utcNow.AddSeconds(expiresIn);
-        resultDictionary[ExpiresAtKeyName] = expiresAt.ToString("O");
+        if (resultDictionary.TryGetValue("expires_in", out var expiresStr) && int.TryParse(expiresStr, out var expiresIn))
+        {
+            resultDictionary[ExpiresAtKeyName] = utcNow.AddSeconds(expiresIn).ToString("O");
+        }
 
-        return resultDictionary!;
+        logger?.LogInformation("[GoogleDriveOAuth] Token successfully received and validated.", null);
+        return resultDictionary;
     }
 }
