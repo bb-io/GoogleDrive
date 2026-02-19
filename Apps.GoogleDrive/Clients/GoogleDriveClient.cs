@@ -1,4 +1,5 @@
-﻿using Blackbird.Applications.Sdk.Common.Authentication;
+﻿using Apps.GoogleDrive.Utils;
+using Blackbird.Applications.Sdk.Common.Authentication;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
@@ -14,7 +15,7 @@ public class GoogleDriveClient : DriveService
         //ServiceAccountCredential? credential = GoogleCredential.FromJson(serviceAccountConfString)
         //                                      .CreateScoped(scopes)
         //                                      .UnderlyingCredential as ServiceAccountCredential;
-        var accessToken = authenticationCredentialsProviders.First(p => p.KeyName == "access_token").Value;
+        var accessToken = authenticationCredentialsProviders.GetRequiredValue("access_token");
         GoogleCredential credentials = GoogleCredential.FromAccessToken(accessToken);
 
         return new BaseClientService.Initializer

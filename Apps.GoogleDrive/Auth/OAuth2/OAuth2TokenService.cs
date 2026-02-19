@@ -1,6 +1,7 @@
 ﻿using Blackbird.Applications.Sdk.Common;
 using Blackbird.Applications.Sdk.Common.Authentication;
 using Blackbird.Applications.Sdk.Common.Authentication.OAuth2;
+using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using System.Text.Json;
 
@@ -75,17 +76,27 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
         CancellationToken cancellationToken)
     {
         var utcNow = DateTime.UtcNow;
-        using HttpClient httpClient = new HttpClient();
+
+        using var httpClient = new HttpClient();
         using var httpContent = new FormUrlEncodedContent(bodyParameters);
         using var response = await httpClient.PostAsync(TokenUrl, httpContent, cancellationToken);
-        var responseContent = await response.Content.ReadAsStringAsync();
+
+        var responseContent = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            throw new PluginMisconfigurationException($"Google OAuth token request failed. Please reconnect the connection. Details: {responseContent}");
+
         var resultDictionary = JsonSerializer.Deserialize<Dictionary<string, object>>(responseContent)
-                                   ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
-                               ?? throw new InvalidOperationException(
-                                   $"Invalid response content: {responseContent}");
+                               ?.ToDictionary(r => r.Key, r => r.Value?.ToString())
+                           ?? throw new PluginApplicationException($"Invalid token response: {responseContent}");
+
+        if (!resultDictionary.TryGetValue("access_token", out var token) || string.IsNullOrWhiteSpace(token))
+            throw new PluginApplicationException($"Token response does not contain access_token. Response: {responseContent}");
+
         var expiresIn = int.Parse(resultDictionary["expires_in"]);
         var expiresAt = utcNow.AddSeconds(expiresIn);
-        resultDictionary.Add(ExpiresAtKeyName, expiresAt.ToString());
-        return resultDictionary;
+        resultDictionary[ExpiresAtKeyName] = expiresAt.ToString("O");
+
+        return resultDictionary!;
     }
 }
