@@ -101,8 +101,53 @@ public class StorageActions : DriveInvocable
     {
         var query = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
 
+        var folderIds = new List<string>();
+
         if (!string.IsNullOrEmpty(input.FolderId))
-            query += $" and '{input.FolderId}' in parents";
+        {
+            folderIds.Add(input.FolderId);
+
+            if (input.IncludeSubfolders.HasValue && input.IncludeSubfolders.Value)
+            {
+                var currentLevel = new List<string> { input.FolderId };
+                int currentDepth = 0;
+                bool unlimitedDepth = !input.MaxSubfolderLevel.HasValue;
+
+                while (currentLevel.Any() &&
+                       (unlimitedDepth || currentDepth < input.MaxSubfolderLevel.Value))
+                {
+                    var nextLevel = new List<string>();
+
+                    foreach (var folderId in currentLevel)
+                    {
+                        var subfolderRequest = Client.Files.List();
+                        subfolderRequest.Q =
+                            $"trashed = false and mimeType = 'application/vnd.google-apps.folder' and '{folderId}' in parents";
+                        subfolderRequest.Fields = "files(id)";
+                        subfolderRequest.SupportsAllDrives = true;
+                        subfolderRequest.IncludeItemsFromAllDrives = true;
+
+                        var subfolderResponse = await ExecuteWithErrorHandlingAsync(
+                            async () => await subfolderRequest.ExecuteAsync());
+
+                        if (subfolderResponse.Files != null)
+                        {
+                            foreach (var folder in subfolderResponse.Files)
+                            {
+                                nextLevel.Add(folder.Id);
+                                folderIds.Add(folder.Id);
+                            }
+                        }
+                    }
+
+                    currentLevel = nextLevel;
+                    currentDepth++;
+                }
+            }
+
+            var parentQuery = string.Join(" or ", folderIds.Select(id => $"'{id}' in parents"));
+            query += $" and ({parentQuery})";
+        }
 
         if (!string.IsNullOrEmpty(input.FileName))
             query += $" and name contains '{input.FileName}'";
@@ -115,7 +160,6 @@ public class StorageActions : DriveInvocable
         request.SupportsAllDrives = true;
         request.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
         request.Q = query;
-
         request.PageSize = input.Limit ?? 1000;
 
         var allFiles = new List<FileInfo>();
@@ -125,7 +169,8 @@ public class StorageActions : DriveInvocable
         {
             request.PageToken = pageToken;
 
-            var response = await ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
+            var response = await ExecuteWithErrorHandlingAsync(
+                async () => await request.ExecuteAsync());
 
             if (response.Files != null)
                 allFiles.AddRange(response.Files.Select(f => new FileInfo(f)));
@@ -136,7 +181,9 @@ public class StorageActions : DriveInvocable
 
         if (input.FileExactMatch == true && !string.IsNullOrEmpty(input.FileName))
         {
-            allFiles = allFiles.Where(x => x.FileName == input.FileName).ToList();
+            allFiles = allFiles
+                .Where(x => x.FileName == input.FileName)
+                .ToList();
 
             if (!allFiles.Any())
             {
