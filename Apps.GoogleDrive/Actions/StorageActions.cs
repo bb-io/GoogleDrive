@@ -99,10 +99,26 @@ public class StorageActions : DriveInvocable
     [Action("Search files", Description = "Search files by specific criteria")]
     public async Task<SearchFilesResponse> SearchFilesAsync([ActionParameter] SearchFilesRequest input)
     {
-        var query = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
+        var folderIds = new List<string>();
 
         if (!string.IsNullOrEmpty(input.FolderId))
-            query += $" and '{input.FolderId}' in parents";
+        {
+            folderIds.Add(input.FolderId);
+
+            if (input.IncludeSubfolders == true)
+            {
+                var subfolders = await GetAllSubfolderIdsAsync(input.FolderId, input.MaxSubfolderLevel);
+                folderIds.AddRange(subfolders);
+            }
+        }
+
+        var query = "trashed = false and mimeType != 'application/vnd.google-apps.folder'";
+
+        if (folderIds.Any())
+        {
+            var parentQueries = folderIds.Select(id => $"'{id}' in parents");
+            query += $" and ({string.Join(" or ", parentQueries)})";
+        }
 
         if (!string.IsNullOrEmpty(input.FileName))
             query += $" and name contains '{input.FileName}'";
@@ -115,7 +131,6 @@ public class StorageActions : DriveInvocable
         request.SupportsAllDrives = true;
         request.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
         request.Q = query;
-
         request.PageSize = input.Limit ?? 1000;
 
         var allFiles = new List<FileInfo>();
@@ -124,35 +139,18 @@ public class StorageActions : DriveInvocable
         do
         {
             request.PageToken = pageToken;
-
             var response = await ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
-
             if (response.Files != null)
                 allFiles.AddRange(response.Files.Select(f => new FileInfo(f)));
-
             pageToken = response.NextPageToken;
-
         } while (!string.IsNullOrEmpty(pageToken));
 
         if (input.FileExactMatch == true && !string.IsNullOrEmpty(input.FileName))
         {
             allFiles = allFiles.Where(x => x.FileName == input.FileName).ToList();
-
-            if (!allFiles.Any())
-            {
-                return new()
-                {
-                    Files = new List<FileInfo>(),
-                    TotalCount = 0
-                };
-            }
         }
 
-        return new()
-        {
-            Files = allFiles,
-            TotalCount = allFiles.Count
-        };
+        return new SearchFilesResponse { Files = allFiles, TotalCount = allFiles.Count };
     }
 
 
@@ -248,6 +246,37 @@ public class StorageActions : DriveInvocable
         return new FileModel {
             File = await _fileManagementClient.UploadAsync(stream, exportMime, fileName),
         };
+    }
+
+    private async Task<List<string>> GetAllSubfolderIdsAsync(string rootId, double? maxLevel)
+    {
+        var allFolderIds = new List<string>();
+        var foldersToProcess = new Queue<(string Id, int Level)>();
+        foldersToProcess.Enqueue((rootId, 0));
+
+        while (foldersToProcess.Count > 0)
+        {
+            var (currentId, currentLevel) = foldersToProcess.Dequeue();
+
+            if (maxLevel.HasValue && currentLevel >= maxLevel.Value)
+                continue;
+
+            var request = Client.Files.List();
+            request.Q = $"'{currentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+            request.Fields = "nextPageToken, files(id)";
+
+            var response = await ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
+
+            if (response.Files != null)
+            {
+                foreach (var folder in response.Files)
+                {
+                    allFolderIds.Add(folder.Id);
+                    foldersToProcess.Enqueue((folder.Id, currentLevel + 1));
+                }
+            }
+        }
+        return allFolderIds;
     }
 
     private Task<FileModel> DownloadFileViaPlatform(
