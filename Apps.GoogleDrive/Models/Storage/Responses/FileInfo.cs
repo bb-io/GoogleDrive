@@ -17,6 +17,8 @@ public class FileInfo
 
     [Display("Updated at")] public DateTime? UpdatedAt { get; set; }
 
+    [Display("Parent folder ID")] public string? ParentID { get; set; }
+
     public FileInfo()
     {
     }
@@ -29,5 +31,6 @@ public class FileInfo
         MimeType = file.MimeType;
         CreatedAt = file.CreatedTimeDateTimeOffset?.DateTime;
         UpdatedAt = file.ModifiedTimeDateTimeOffset?.DateTime;
+        ParentID = file.Parents?.FirstOrDefault() ?? "root";
     }
 }
