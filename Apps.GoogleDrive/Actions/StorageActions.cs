@@ -129,7 +129,7 @@ public class StorageActions : DriveInvocable
         var request = ExecuteWithErrorHandling(() => Client.Files.List());
         request.IncludeItemsFromAllDrives = true;
         request.SupportsAllDrives = true;
-        request.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
+        request.Fields = "nextPageToken, files(id, name, createdTime, trashedTime, trashed, modifiedTime, mimeType, size, parents)";
         request.Q = query;
         request.PageSize = input.Limit ?? 1000;
 
