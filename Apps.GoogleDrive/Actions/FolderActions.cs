@@ -28,7 +28,7 @@ public class FolderActions : DriveInvocable
         _fileManagementClient = fileManagementClient;
     }
 
-    [Action("Create folder", Description = "Create folder")]
+    [Action("Create folder", Description = "Create a folder in a selected parent folder")]
     public CreateFolderResponse CreateFolder([ActionParameter] CreateFolderRequest input)
     {
         var fileMetadata = new Google.Apis.Drive.v3.Data.File
@@ -49,7 +49,7 @@ public class FolderActions : DriveInvocable
         };
     }
 
-    [Action("Get folder information", Description = "Get folder information from folder ID")]
+    [Action("Get folder information", Description = "Get folder details by folder ID")]
     public async Task<GetFolderByIdResponse> GetFolderById([ActionParameter] GetFolderByIdRequest input)
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FolderId));
@@ -83,7 +83,7 @@ public class FolderActions : DriveInvocable
         
     }
 
-    [Action("Check folder exists", Description = "Given a folder name and a parent folder, checks if a folder with the same name exists")]
+    [Action("Check folder exists", Description = "Check whether a folder with a specific name exists in a parent folder")]
     public async Task<CheckFolderResponse> CheckFolderExists([ActionParameter] CheckFolderRequest input)
     {
         string query = $"mimeType = 'application/vnd.google-apps.folder' and name = '{input.FolderName}' and '{input.ParentFolderId}' in parents and trashed = false";
