@@ -19,6 +19,10 @@ public class FileInfo
 
     [Display("Parent folder ID")] public string? ParentID { get; set; }
 
+    [Display("Owner name")] public string? OwnerName { get; set; }
+    [Display("Owner email")] public string? OwnerEmail { get; set; }
+    [Display("Last modifier email")] public string? LastModifierEmail { get; set; }
+
     public FileInfo()
     {
     }
@@ -32,5 +36,9 @@ public class FileInfo
         CreatedAt = file.CreatedTimeDateTimeOffset?.DateTime;
         UpdatedAt = file.ModifiedTimeDateTimeOffset?.DateTime;
         ParentID = file.Parents?.FirstOrDefault() ?? "root";
+        var primaryOwner = file.Owners?.FirstOrDefault();
+        OwnerName = primaryOwner?.DisplayName;
+        OwnerEmail = primaryOwner?.EmailAddress;
+        LastModifierEmail = file.LastModifyingUser?.EmailAddress;
     }
 }
