@@ -42,7 +42,7 @@ public class StorageActions : DriveInvocable
     };
 
     [BlueprintActionDefinition(BlueprintAction.DownloadFile)]
-    [Action("Download file", Description = "Download a specific file")]
+    [Action("Download file", Description = "Download a file by ID")]
     public async Task<FileModel> GetFile([ActionParameter] DownloadFileRequest input)
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Get(input.FileId));
@@ -56,7 +56,7 @@ public class StorageActions : DriveInvocable
     }
 
     [BlueprintActionDefinition(BlueprintAction.UploadFile)]
-    [Action("Upload file", Description = "Upload files")]
+    [Action("Upload file", Description = "Upload a file to a selected folder")]
     public async Task<UploadFileResponse> UploadFile([ActionParameter] UploadFilesRequest input)
     {
         if (input.File.ContentType.Contains("vnd.google-apps"))
@@ -88,7 +88,7 @@ public class StorageActions : DriveInvocable
         return new() { Id = request.ResponseBody.Id };
     }
 
-    [Action("Delete item", Description = "Delete item (file/folder)")]
+    [Action("Delete item", Description = "Delete a file or folder by ID")]
     public void DeleteItem([ActionParameter] GetItemRequest input)
     {
         var request = ExecuteWithErrorHandling(() => Client.Files.Delete(input.ItemId));
@@ -96,7 +96,7 @@ public class StorageActions : DriveInvocable
         ExecuteWithErrorHandling(() => request.Execute());
     }
 
-    [Action("Search files", Description = "Search files by specific criteria")]
+    [Action("Search files", Description = "Search files by folder, name, and MIME type filters")]
     public async Task<SearchFilesResponse> SearchFilesAsync([ActionParameter] SearchFilesRequest input)
     {
         var folderIds = new List<string>();
@@ -154,7 +154,7 @@ public class StorageActions : DriveInvocable
     }
 
 
-    [Action("Get file information", Description = "Get file information by specific criteria")]
+    [Action("Get file information", Description = "Get the first file that matches the search criteria")]
     public async Task<FindFileResponse> FindFileAsync([ActionParameter] FindFileRequest input)
     {
         var searchFilesResponse = await ExecuteWithErrorHandlingAsync(async () => await SearchFilesAsync(new SearchFilesRequest

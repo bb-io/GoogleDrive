@@ -18,7 +18,7 @@ namespace Apps.GoogleDrive.Actions
             _fileManagementClient = fileManagementClient;
         }
 
-        [Action("Get file labels", Description = "Returns all the label field keys attached to a file")]
+        [Action("Get file labels", Description = "Get all label field keys attached to a file")]
         public async Task<FieldKeysResponse> GetFileLabels([ActionParameter] DownloadFileRequest input)
         {
             var res = await ExecuteWithErrorHandlingAsync(async () => await Client.Files.ListLabels(input.FileId).ExecuteAsync());

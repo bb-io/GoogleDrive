@@ -28,30 +28,49 @@ Before you can connect you need to make sure that:
 
 ### Files
 
-- **Download file** Download a specific file from Google Drive.
-- **Upload file** Upload a file to Google Drive, including uploading files to a shared drive.
-- **Delete item** Delete a file from Google Drive.
-- **Search files** Search files in Google Drive by providing specific search criteria (e.g. file name, file type, etc.). Returns all files that match the search criteria.
-- **Find file information** Similar to the search files action, but this action returns only the first file that matches the search criteria so you don't need to use a loop to get the file information. Also returns `Is found` output to indicate if the file was found or not.
-- **Update file** Update metadata or content of an existing file without changing the file ID
+- **Download file** Download a file by ID.
+- **Upload file** Upload a file to a selected folder.
+    Advanced settings:
+    - **Save as** Choose a MIME type to save the uploaded file as.
+- **Delete item** Delete a file or folder by ID.
+- **Search files** Search files by folder, name, and MIME type filters. Outputs all matching files and the total count.
+    Advanced settings:
+    - **Folder ID** Limit results to files in a specific folder.
+    - **Include subfolders?** Include files from subfolders of the selected folder.
+    - **Max subfolder level to search** Set how many subfolder levels to include.
+    - **File name** Limit results to files whose names contain this text.
+    - **File name must be exact match?** Match only files with an exact file name.
+    - **Mime type** Limit results to files with this MIME type.
+    - **Limit** Set the maximum number of files to output.
+- **Get file information** Get the first file that matches the search criteria and output whether a file was found.
+- **Update file** Update file metadata or content without changing the file ID.
+    Advanced settings:
+    - **New file content** Replace the file content.
+    - **New file name** Rename the file.
 
 ### Folders
 
-- **Create folder** Create a folder in Google Drive.
-- **Check folder exists** Given a folder name and a parent folder, checks if a folder with the same name exists.
-- **Get folder information** Get folder information from folder ID
+- **Create folder** Create a folder in a selected parent folder.
+- **Check folder exists** Check whether a folder with a specific name exists in a parent folder.
+- **Get folder information** Get folder details by folder ID.
 
 ### Labels
 
-- **Get file labels** returns all the label field keys attached to a file. This is in the form of a list of strings. You can use the array contains utility action to verify if certain labels are added to this file.
+- **Get file labels** Get all label field keys attached to a file.
 
 ## Events
 
 ### File events
 
-- **On files deleted in shared drives** This event triggers when any existing files are deleted in the shared drives.
-- **On files created** On any file created in specified folder
-- **On files updated** On any file updated in specified folder
+- **On files deleted in shared drives** On files deleted in shared drives.
+- **On files created** On files created in a specified folder.
+    Advanced settings:
+    - **File name contains** Trigger only for files whose names contain this text.
+    - **Mime type** Trigger only for files with this MIME type.
+- **On files updated** On files updated in a specified folder.
+    Advanced settings:
+    - **Folder ID** Trigger only for files in this folder.
+    - **File ID** Trigger only for a specific file.
 
 ## Example 
 
@@ -59,7 +78,7 @@ Here is an example of how you can use the Google Drive app in a workflow:
 
 ![example](image/README/example.png)
 
-In this example, the workflow starts with the **On items added** event, which triggers when any file or folder is added to Google Drive. Then, the workflow uses the **Download files** action to download the file that was added. In the next step we translate the file via `DeepL` and then upload the translated file to Slack channel.
+In this example, the workflow starts with the **On files created** event. Then, the workflow uses the **Download file** action to download the created file. In the next step, the file is translated via `DeepL` and uploaded to a Slack channel.
 
 ## Eggs
 

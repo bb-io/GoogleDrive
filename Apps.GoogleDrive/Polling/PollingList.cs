@@ -19,20 +19,20 @@ public class PollingList : DriveInvocable
     {
     }
 
-    [PollingEvent("On files deleted in shared drives", "On any files are deleted in shared drives")]
+    [PollingEvent("On files deleted in shared drives", "On files deleted in shared drives")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesDeleted(
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
         x => x.TrashedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate);
 
     [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
-    [PollingEvent("On files created", "On any file created in specified folder")]
+    [PollingEvent("On files created", "On files created in a specified folder")]
     public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(PollingEventRequest<DateMemory> request,
         [PollingEventParameter]OnFileCreatedRequest filter)
     {
         return await HandleCreatedFilesPolling(request, filter);
     }
 
-    [PollingEvent("On files updated", "On any file updated in specified folder")]
+    [PollingEvent("On files updated", "On files updated in a specified folder")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
         [PollingEventParameter] OnFileUpdateRequest filter,
        PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
