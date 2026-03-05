@@ -21,6 +21,8 @@ public class FileInfo
 
     [Display("Owner name")] public string? OwnerName { get; set; }
     [Display("Owner email")] public string? OwnerEmail { get; set; }
+
+    [Display("Last modifier name")] public string? LastModifierName { get; set; }
     [Display("Last modifier email")] public string? LastModifierEmail { get; set; }
 
     public FileInfo()
@@ -39,6 +41,7 @@ public class FileInfo
         var primaryOwner = file.Owners?.FirstOrDefault();
         OwnerName = primaryOwner?.DisplayName;
         OwnerEmail = primaryOwner?.EmailAddress;
+        LastModifierName = file.LastModifyingUser?.DisplayName;
         LastModifierEmail = file.LastModifyingUser?.EmailAddress;
     }
 }
