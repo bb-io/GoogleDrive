@@ -1,4 +1,5 @@
-﻿using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Helper;
+using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Apps.GoogleDrive.Polling.Models;
 using Apps.GoogleDrive.Polling.Models.Memory;
@@ -127,7 +128,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
 
             if (includeSubfolders == true)
             {
-                var subfolders = await GetAllSubfolderIdsAsync(folderId, maxLevel);
+                var subfolders = await FolderHelper.GetAllSubfolderIds(this, folderId, maxLevel);
                 folderIds.AddRange(subfolders);
             }
         }
@@ -152,36 +153,6 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             queryParts.Add($"mimeType = '{EscapeDriveQueryValue(mimeTypeFilter.Trim())}'");
 
         return await SearchFilesAsync(string.Join(" and ", queryParts));
-    }
-
-    private async Task<List<string>> GetAllSubfolderIdsAsync(string rootId, double? maxLevel)
-    {
-        var allFolderIds = new List<string>();
-        var foldersToProcess = new Queue<(string Id, int Level)>();
-        foldersToProcess.Enqueue((rootId, 0));
-
-        while (foldersToProcess.Count > 0)
-        {
-            var (currentId, currentLevel) = foldersToProcess.Dequeue();
-
-            if (maxLevel.HasValue && currentLevel >= maxLevel.Value) continue;
-
-            var request = Client.Files.List();
-            request.Q = $"'{currentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-            request.Fields = "nextPageToken, files(id)";
-
-            var response = await ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync(CancellationToken.None));
-
-            if (response.Files != null)
-            {
-                foreach (var folder in response.Files)
-                {
-                    allFolderIds.Add(folder.Id);
-                    foldersToProcess.Enqueue((folder.Id, currentLevel + 1));
-                }
-            }
-        }
-        return allFolderIds;
     }
 
     private static string EscapeDriveQueryValue(string value) => value.Replace("\\", "\\\\").Replace("'", "\\'");

@@ -1,4 +1,5 @@
-﻿using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Helper;
+using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models;
 using Apps.GoogleDrive.Models.Storage.Requests;
 using Apps.GoogleDrive.Models.Storage.Responses;
@@ -107,7 +108,7 @@ public class StorageActions : DriveInvocable
 
             if (input.IncludeSubfolders == true)
             {
-                var subfolders = await GetAllSubfolderIdsAsync(input.FolderId, input.MaxSubfolderLevel);
+                var subfolders = await FolderHelper.GetAllSubfolderIds(this, input.FolderId, input.MaxSubfolderLevel);
                 folderIds.AddRange(subfolders);
             }
         }
@@ -246,37 +247,6 @@ public class StorageActions : DriveInvocable
         return new FileModel {
             File = await _fileManagementClient.UploadAsync(stream, exportMime, fileName),
         };
-    }
-
-    private async Task<List<string>> GetAllSubfolderIdsAsync(string rootId, double? maxLevel)
-    {
-        var allFolderIds = new List<string>();
-        var foldersToProcess = new Queue<(string Id, int Level)>();
-        foldersToProcess.Enqueue((rootId, 0));
-
-        while (foldersToProcess.Count > 0)
-        {
-            var (currentId, currentLevel) = foldersToProcess.Dequeue();
-
-            if (maxLevel.HasValue && currentLevel >= maxLevel.Value)
-                continue;
-
-            var request = Client.Files.List();
-            request.Q = $"'{currentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-            request.Fields = "nextPageToken, files(id)";
-
-            var response = await ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
-
-            if (response.Files != null)
-            {
-                foreach (var folder in response.Files)
-                {
-                    allFolderIds.Add(folder.Id);
-                    foldersToProcess.Enqueue((folder.Id, currentLevel + 1));
-                }
-            }
-        }
-        return allFolderIds;
     }
 
     private Task<FileModel> DownloadFileViaPlatform(

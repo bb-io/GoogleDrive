@@ -18,7 +18,7 @@ namespace Apps.GoogleDrive.Invocables
             //LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
         }
 
-        protected async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
+        public async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
         {
             try
             {
