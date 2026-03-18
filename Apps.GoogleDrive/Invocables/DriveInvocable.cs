@@ -8,7 +8,7 @@ namespace Apps.GoogleDrive.Invocables
 {
     public class DriveInvocable : BaseInvocable
     {
-        protected GoogleDriveClient Client { get; }
+        public GoogleDriveClient Client { get; }
 
         protected GoogleDriveLabelClient LabelClient { get; }
 
