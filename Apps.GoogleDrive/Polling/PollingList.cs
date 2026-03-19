@@ -1,9 +1,9 @@
-﻿using Apps.GoogleDrive.Invocables;
+﻿using Apps.GoogleDrive.Helper;
+using Apps.GoogleDrive.Invocables;
 using Apps.GoogleDrive.Models.Storage.Responses;
 using Apps.GoogleDrive.Polling.Models;
 using Apps.GoogleDrive.Polling.Models.Memory;
 using Apps.GoogleDrive.Utils;
-using Blackbird.Applications.Sdk.Common.Exceptions;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Blackbird.Applications.SDK.Blueprints;
@@ -12,13 +12,9 @@ using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
 namespace Apps.GoogleDrive.Polling;
 
-[PollingEventList]
-public class PollingList : DriveInvocable
+[PollingEventList("Files")]
+public class PollingList(InvocationContext invocationContext) : DriveInvocable(invocationContext)
 {
-    public PollingList(InvocationContext invocationContext) : base(invocationContext)
-    {
-    }
-
     [PollingEvent("On files deleted in shared drives", "On files deleted in shared drives")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesDeleted(
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
@@ -26,20 +22,47 @@ public class PollingList : DriveInvocable
 
     [BlueprintEventDefinition(BlueprintEvent.FilesCreatedOrUpdated)]
     [PollingEvent("On files created", "On files created in a specified folder")]
-    public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(PollingEventRequest<DateMemory> request,
-        [PollingEventParameter]OnFileCreatedRequest filter)
+    public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileCreated(
+        PollingEventRequest<DateMemory> request,
+        [PollingEventParameter] OnFileCreatedRequest filter)
     {
-        return await HandleCreatedFilesPolling(request, filter);
+        if (request.Memory is null) return CreateEmptyResponse();
+
+        var items = await GetFilesWithSubfoldersAsync(
+            request.Memory.LastInteractionDate,
+            filter.FolderId,
+            filter.IncludeSubfolders,
+            filter.MaxSubfolderLevel,
+            filter.FileNameContains,
+            filter.MimeType,
+            "createdTime"
+        );
+
+        return items.Count != 0 ? CreateSuccessResponse(items) : CreateEmptyResponse();
     }
 
     [PollingEvent("On files updated", "On files updated in a specified folder")]
-    public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
+    public async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFileUpdated(
         [PollingEventParameter] OnFileUpdateRequest filter,
-       PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
-       x => x.ModifiedTimeDateTimeOffset?.UtcDateTime > request.Memory?.LastInteractionDate
-        && (string.IsNullOrEmpty(filter.FileId) || x.Id == filter.FileId)
-        && (string.IsNullOrEmpty(filter.FolderId)|| x.Parents?.Contains(filter.FolderId) == true));
+        PollingEventRequest<DateMemory> request)
+    {
+        if (request.Memory is null) return CreateEmptyResponse();
 
+        var items = await GetFilesWithSubfoldersAsync(
+            request.Memory.LastInteractionDate,
+            filter.FolderId,
+            filter.IncludeSubfolders,
+            filter.MaxSubfolderLevel, 
+            fileNameContains: null,
+            mimeTypeFilter: null,
+            dateField: "modifiedTime"
+        );
+
+        if (!string.IsNullOrEmpty(filter.FileId))
+            items = items.Where(x => x.Id == filter.FileId).ToList();
+
+        return items.Count != 0 ? CreateSuccessResponse(items) : CreateEmptyResponse();
+    }
 
     private async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> HandleFilesPolling(
         PollingEventRequest<DateMemory> request, Func<File, bool> filter)
@@ -87,68 +110,49 @@ public class PollingList : DriveInvocable
         };
     }
 
-    private async Task<PollingEventResponse<DateMemory, SearchFilesResponse>> HandleCreatedFilesPolling(
-     PollingEventRequest<DateMemory> request,
-     OnFileCreatedRequest filter)
+    private async Task<List<File>> GetFilesWithSubfoldersAsync(
+        DateTime lastInteractionDate, 
+        string? folderId, 
+        bool? includeSubfolders,
+        double? maxLevel, 
+        string? fileNameContains, 
+        string? mimeTypeFilter, 
+        string dateField)
     {
-        if (request.Memory is null)
+        var lastInteractionIso = lastInteractionDate.ToUniversalTime().ToString("yyyy-MM-dd'T'HH':'mm':'ss.fff'Z'");
+        var folderIds = new List<string>();
+
+        if (!string.IsNullOrEmpty(folderId))
         {
-            return new()
+            folderIds.Add(folderId);
+
+            if (includeSubfolders == true)
             {
-                FlyBird = false,
-                Memory = new() { LastInteractionDate = DateTime.UtcNow }
-            };
+                var subfolders = await FolderHelper.GetAllSubfolderIds(this, folderId, maxLevel);
+                folderIds.AddRange(subfolders);
+            }
         }
-
-        var lastInteractionIso = request.Memory.LastInteractionDate
-            .ToUniversalTime()
-            .ToString("yyyy-MM-dd'T'HH':'mm':'ss.fff'Z'");
-
-        var folderId = EscapeDriveQueryValue(filter.FolderId);
 
         var queryParts = new List<string>
         {
-            $"createdTime > '{lastInteractionIso}'",
-            $"'{folderId}' in parents",
+            $"{dateField} > '{lastInteractionIso}'",
             "trashed = false",
             "mimeType != 'application/vnd.google-apps.folder'"
         };
 
-        if (!string.IsNullOrWhiteSpace(filter.FileNameContains))
+        if (folderIds.Count != 0)
         {
-            var nameContains = EscapeDriveQueryValue(filter.FileNameContains.Trim());
-            queryParts.Add($"name contains '{nameContains}'");
+            var parentQueries = folderIds.Select(id => $"'{EscapeDriveQueryValue(id)}' in parents");
+            queryParts.Add($"({string.Join(" or ", parentQueries)})");
         }
 
-        if (!string.IsNullOrWhiteSpace(filter.MimeType))
-        {
-            var mimeType = EscapeDriveQueryValue(filter.MimeType.Trim());
-            queryParts.Add($"mimeType = '{mimeType}'");
-        }
+        if (!string.IsNullOrWhiteSpace(fileNameContains))
+            queryParts.Add($"name contains '{EscapeDriveQueryValue(fileNameContains.Trim())}'");
 
-        var query = string.Join(" and ", queryParts);
+        if (!string.IsNullOrWhiteSpace(mimeTypeFilter))
+            queryParts.Add($"mimeType = '{EscapeDriveQueryValue(mimeTypeFilter.Trim())}'");
 
-        var items = (await SearchFilesAsync(query)).ToArray();
-
-        if (!items.Any())
-        {
-            return new()
-            {
-                FlyBird = false,
-                Memory = new() { LastInteractionDate = DateTime.UtcNow }
-            };
-        }
-
-        return new()
-        {
-            FlyBird = true,
-            Result = new()
-            {
-                Files = items.Select(x => new FileInfo(x)).ToList(),
-                TotalCount = items.Length
-            },
-            Memory = new() { LastInteractionDate = DateTime.UtcNow }
-        };
+        return await SearchFilesAsync(string.Join(" and ", queryParts));
     }
 
     private static string EscapeDriveQueryValue(string value) => value.Replace("\\", "\\\\").Replace("'", "\\'");
@@ -203,5 +207,26 @@ public class PollingList : DriveInvocable
         } while (pageToken != null);
 
         return allFiles;
+    }
+
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateEmptyResponse() => new()
+    {
+        FlyBird = false,
+        Memory = new() { LastInteractionDate = DateTime.UtcNow }
+    };
+
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateSuccessResponse(IEnumerable<File> items)
+    {
+        var fileArray = items.ToArray();
+        return new()
+        {
+            FlyBird = true,
+            Result = new()
+            {
+                Files = fileArray.Select(x => new FileInfo(x)).ToList(),
+                TotalCount = fileArray.Length
+            },
+            Memory = new() { LastInteractionDate = DateTime.UtcNow }
+        };
     }
 }

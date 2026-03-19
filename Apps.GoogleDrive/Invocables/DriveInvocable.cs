@@ -8,7 +8,7 @@ namespace Apps.GoogleDrive.Invocables
 {
     public class DriveInvocable : BaseInvocable
     {
-        protected GoogleDriveClient Client { get; }
+        public GoogleDriveClient Client { get; }
 
         protected GoogleDriveLabelClient LabelClient { get; }
 
@@ -18,7 +18,7 @@ namespace Apps.GoogleDrive.Invocables
             //LabelClient = new GoogleDriveLabelClient(InvocationContext.AuthenticationCredentialsProviders);
         }
 
-        protected async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
+        public async Task<T> ExecuteWithErrorHandlingAsync<T>(Func<Task<T>> action)
         {
             try
             {
