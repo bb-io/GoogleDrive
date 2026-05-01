@@ -47,6 +47,7 @@ Before you can connect you need to make sure that:
     Advanced settings:
     - **New file content** Replace the file content.
     - **New file name** Rename the file.
+- **Get file comments**
 
 ### Folders
 

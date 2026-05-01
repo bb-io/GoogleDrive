@@ -11,6 +11,8 @@ using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.SDK.Blueprints;
 using Blackbird.Applications.SDK.Extensions.FileManagement.Interfaces;
 using Google.Apis.Download;
+using Google.Apis.Drive.v3;
+using Google.Apis.DriveActivity.v2.Data;
 using Google.Apis.Upload;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -165,12 +167,42 @@ public class StorageActions : DriveInvocable
             MimeType = input.MimeType,
             FileExactMatch = input.FileExactMatch
         }));
-        
+
         var first = searchFilesResponse.Files.FirstOrDefault();
         return new()
         {
             FileInfo = first ?? new FileInfo(),
             Found = first != null
+        };
+    }
+
+    [Action("Get file comments", Description = "Get comments for a specific Google Drive file")]
+    public async Task<GetFileCommentsResponse> GetFileCommentsAsync(
+    [ActionParameter] GetFileRequest input)
+    {
+        var comments = await ExecuteWithErrorHandlingAsync(async () =>
+        {
+            var request = Client.Comments.List(input.FileId);
+            request.Fields = "comments(id,content,createdTime,author/displayName)";
+
+            var response = await request.ExecuteAsync();
+
+            return response.Comments?
+                .Select(c => new Models.Storage.Responses.FileComment
+                {
+                    ID = c.Id,
+                    Content = c.Content,
+                    Author = c.Author?.DisplayName,
+                    CreatedTime = c.CreatedTime,
+                    //Anchor = c.Anchor
+                    
+                })
+                .ToList() ?? new List<Models.Storage.Responses.FileComment>();
+        });
+
+        return new GetFileCommentsResponse
+        {
+            Comments = comments
         };
     }
 
