@@ -194,7 +194,7 @@ public class StorageActions : DriveInvocable
                     Content = c.Content,
                     Author = c.Author?.DisplayName,
                     CreatedTime = c.CreatedTime,
-                    Anchor = c.Anchor
+                    //Anchor = c.Anchor
                     
                 })
                 .ToList() ?? new List<Models.Storage.Responses.FileComment>();

@@ -14,7 +14,7 @@ namespace Apps.GoogleDrive.Models.Storage.Responses
         public string Content { get; set; }
         public string Author { get; set; }
 
-        public string? Anchor { get; set; }
+       // public string? Anchor { get; set; }
 
         [Display("Created time")]
         public DateTime? CreatedTime { get; set; }
