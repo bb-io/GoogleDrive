@@ -35,5 +35,30 @@ namespace Tests.GoogleDrive
             Assert.IsTrue(result.Exists);
 
         }
+
+        [TestMethod]
+        public async Task GetFileInfoTest()
+        {
+            var action = new StorageActions(InvocationContext, FileManager);
+
+            var input = new FindFileRequest { FileName= "23/04/2026_2026Q2S3 UA text ads.json",  FolderId= "145E4tjkkEOXLr38aNBU-FD4wFhRyDvZ5", MimeType= "application/json" };
+
+            var result = await action.FindFileAsync(input);
+            //1iZCM6o52QobQK2qPMelx9TphdkKYspnW  
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            Assert.IsNotNull(result);
+        }
+
+        [TestMethod]
+        public async Task GetFileCommentsTest()
+        {
+            var action = new StorageActions(InvocationContext, FileManager);
+            var input = new GetFileRequest { FileId = "1m9Wfl0h-v7kLi-GAhmXukNtedmEhi7n-" };
+
+            var result = await action.GetFileCommentsAsync(input);
+
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(result));
+            Assert.IsNotNull(result);
+        }
     }
 }
