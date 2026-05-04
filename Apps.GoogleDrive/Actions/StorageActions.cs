@@ -183,8 +183,7 @@ public class StorageActions : DriveInvocable
         var comments = await ExecuteWithErrorHandlingAsync(async () =>
         {
             var request = Client.Comments.List(input.FileId);
-            request.Fields = "comments(id,content,createdTime,author/displayName,anchor,quotedFileContent/mimeType,quotedFileContent/value)";
-
+            request.Fields = "comments(id,content,createdTime,author/displayName,anchor,quotedFileContent/mimeType,quotedFileContent/value,replies(id,content,createdTime,author/displayName))";
             var response = await request.ExecuteAsync();
 
             return response.Comments?
@@ -196,7 +195,14 @@ public class StorageActions : DriveInvocable
                     CreatedTime = c.CreatedTime,
                     Anchor = c.Anchor,
                     QuotedContent = c.QuotedFileContent?.Value,
-                    QuotedContentMimeType = c.QuotedFileContent?.MimeType
+                    QuotedContentMimeType = c.QuotedFileContent?.MimeType,
+                    Replies = c.Replies?.Select(r => new CommentReply
+                    {
+                        ID = r.Id,
+                        Content = r.Content,
+                        Author = r.Author?.DisplayName,
+                        CreatedTime = r.CreatedTime
+                    }).ToList() ?? new List<CommentReply>()
                 })
                 .ToList() ?? new List<Models.Storage.Responses.FileComment>();
         });
