@@ -24,5 +24,18 @@ namespace Apps.GoogleDrive.Models.Storage.Responses
 
         [Display("Created time")]
         public DateTime? CreatedTime { get; set; }
+
+        public List<CommentReply> Replies { get; set; } = new();
+    }
+
+    public class CommentReply
+    {
+        [Display("Reply ID")]
+        public string ID { get; set; }
+        public string Content { get; set; }
+        public string Author { get; set; }
+
+        [Display("Created time")]
+        public DateTime? CreatedTime { get; set; }
     }
 }
