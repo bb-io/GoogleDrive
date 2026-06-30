@@ -36,7 +36,7 @@ namespace Apps.GoogleDrive.Models.Storage.Responses
         public string ID { get; set; }
         public string Content { get; set; }
         public string Author { get; set; }
-        public string Action { get; set; }
+        public string? Action { get; set; }
 
         [Display("Created time")]
         public DateTime? CreatedTime { get; set; }
