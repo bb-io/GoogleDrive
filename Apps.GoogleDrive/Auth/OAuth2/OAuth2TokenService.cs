@@ -11,6 +11,7 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
 {
     private const string ExpiresAtKeyName = "expires_at";
     private const string TokenUrl = "https://oauth2.googleapis.com/token";
+    private const int RefreshLeadTimeMinutes = 20;
 
     public OAuth2TokenService(InvocationContext invocationContext) : base(invocationContext)
     {
@@ -18,7 +19,7 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
 
     public bool IsRefreshToken(Dictionary<string, string> values)
         => values.TryGetValue(ExpiresAtKeyName, out var expireValue) &&
-           DateTime.UtcNow > DateTime.Parse(expireValue);
+           DateTime.UtcNow >= DateTime.Parse(expireValue).AddMinutes(-RefreshLeadTimeMinutes);
 
     public int? GetRefreshTokenExprireInMinutes(Dictionary<string, string> values)
     {
@@ -30,7 +31,7 @@ public class OAuth2TokenService : BaseInvocable, IOAuth2TokenService, ITokenRefr
 
         var difference = expireDate - DateTime.UtcNow;
 
-        return (int)difference.TotalMinutes - 5;
+        return (int)difference.TotalMinutes - RefreshLeadTimeMinutes;
     }
 
     public async Task<Dictionary<string, string>> RefreshToken(Dictionary<string, string> values,
