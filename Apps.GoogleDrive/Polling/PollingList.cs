@@ -15,6 +15,8 @@ namespace Apps.GoogleDrive.Polling;
 [PollingEventList("Files")]
 public class PollingList(InvocationContext invocationContext) : DriveInvocable(invocationContext)
 {
+    private const int ParentIdsPerQuery = 20;
+
     [PollingEvent("On files deleted in shared drives", "On files deleted in shared drives")]
     public Task<PollingEventResponse<DateMemory, SearchFilesResponse>> OnFilesDeleted(
         PollingEventRequest<DateMemory> request) => HandleFilesPolling(request,
@@ -119,7 +121,6 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         string? mimeTypeFilter, 
         string dateField)
     {
-        var lastInteractionIso = lastInteractionDate.ToUniversalTime().ToString("yyyy-MM-dd'T'HH':'mm':'ss.fff'Z'");
         var folderIds = new List<string>();
 
         if (!string.IsNullOrEmpty(folderId))
@@ -128,31 +129,49 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
 
             if (includeSubfolders == true)
             {
-                var subfolders = await FolderHelper.GetAllSubfolderIds(this, folderId, maxLevel);
+                var effectiveMaxLevel = maxLevel ?? 2;
+                var subfolders = await FolderHelper.GetAllSubfolderIds(this, folderId, effectiveMaxLevel);
                 folderIds.AddRange(subfolders);
             }
         }
 
-        var queryParts = new List<string>
-        {
-            $"{dateField} > '{lastInteractionIso}'",
-            "trashed = false",
-            "mimeType != 'application/vnd.google-apps.folder'"
-        };
+        var files = new List<File>();
 
-        if (folderIds.Count != 0)
+        if (folderIds.Count == 0)
         {
-            var parentQueries = folderIds.Select(id => $"'{EscapeDriveQueryValue(id)}' in parents");
-            queryParts.Add($"({string.Join(" or ", parentQueries)})");
+            files.AddRange(await SearchFilesAsync("trashed = false"));
+        }
+        else
+        {
+            foreach (var folderIdBatch in folderIds.Distinct().Chunk(ParentIdsPerQuery))
+            {
+                var parentQuery = string.Join(" or ", folderIdBatch.Select(id => $"'{EscapeDriveQueryValue(id)}' in parents"));
+                var query = $"({parentQuery}) and trashed = false";
+                files.AddRange(await SearchFilesAsync(query));
+            }
         }
 
-        if (!string.IsNullOrWhiteSpace(fileNameContains))
-            queryParts.Add($"name contains '{EscapeDriveQueryValue(fileNameContains.Trim())}'");
+        var lastInteractionUtc = lastInteractionDate.ToUniversalTime();
 
-        if (!string.IsNullOrWhiteSpace(mimeTypeFilter))
-            queryParts.Add($"mimeType = '{EscapeDriveQueryValue(mimeTypeFilter.Trim())}'");
+        return files
+            .DistinctBy(file => file.Id)
+            .Where(file => file.MimeType != "application/vnd.google-apps.folder")
+            .Where(file => GetDateValue(file, dateField) > lastInteractionUtc)
+            .Where(file => string.IsNullOrWhiteSpace(fileNameContains)
+                || file.Name.Contains(fileNameContains.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(file => string.IsNullOrWhiteSpace(mimeTypeFilter)
+                || string.Equals(file.MimeType, mimeTypeFilter.Trim(), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+    }
 
-        return await SearchFilesAsync(string.Join(" and ", queryParts));
+    private static DateTime? GetDateValue(File file, string dateField)
+    {
+        return dateField switch
+        {
+            "createdTime" => file.CreatedTimeDateTimeOffset?.UtcDateTime,
+            "modifiedTime" => file.ModifiedTimeDateTimeOffset?.UtcDateTime,
+            _ => throw new ArgumentOutOfRangeException(nameof(dateField), dateField, "Unsupported date field")
+        };
     }
 
     private static string EscapeDriveQueryValue(string value) => value.Replace("\\", "\\\\").Replace("'", "\\'");
@@ -167,6 +186,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             var request = Client.Files.List();
             request.IncludeItemsFromAllDrives = true;
             request.SupportsAllDrives = true;
+            request.Spaces = "drive";
             request.Fields = "nextPageToken, files(id, name, parents, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
             request.PageSize = 100;
             request.PageToken = pageToken;

@@ -4,34 +4,56 @@ namespace Apps.GoogleDrive.Helper;
 
 public static class FolderHelper
 {
+    private const int ParentIdsPerQuery = 20;
+
     public static async Task<List<string>> GetAllSubfolderIds(DriveInvocable invocable, string rootId, double? maxLevel)
     {
         var allFolderIds = new List<string>();
-        var foldersToProcess = new Queue<(string Id, int Level)>();
-        foldersToProcess.Enqueue((rootId, 0));
+        var discoveredFolderIds = new HashSet<string> { rootId };
+        var currentLevelFolderIds = new List<string> { rootId };
+        var currentLevel = 0;
 
-        while (foldersToProcess.Count > 0)
+        while (currentLevelFolderIds.Count > 0 && (!maxLevel.HasValue || currentLevel < maxLevel.Value))
         {
-            var (currentId, currentLevel) = foldersToProcess.Dequeue();
+            var nextLevelFolderIds = new List<string>();
 
-            if (maxLevel.HasValue && currentLevel >= maxLevel.Value)
-                continue;
-
-            var request = invocable.Client.Files.List();
-            request.Q = $"'{currentId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
-            request.Fields = "nextPageToken, files(id)";
-
-            var response = await invocable.ExecuteWithErrorHandlingAsync(async () => await request.ExecuteAsync());
-
-            if (response.Files != null)
+            foreach (var parentIdBatch in currentLevelFolderIds.Chunk(ParentIdsPerQuery))
             {
-                foreach (var folder in response.Files)
+                string? pageToken = null;
+                var parentQuery = string.Join(" or ", parentIdBatch.Select(id => $"'{EscapeDriveQueryValue(id)}' in parents"));
+
+                do
                 {
-                    allFolderIds.Add(folder.Id);
-                    foldersToProcess.Enqueue((folder.Id, currentLevel + 1));
-                }
+                    var request = invocable.Client.Files.List();
+                    request.Q = $"({parentQuery}) and mimeType = 'application/vnd.google-apps.folder' and trashed = false";
+                    request.IncludeItemsFromAllDrives = true;
+                    request.SupportsAllDrives = true;
+                    request.Spaces = "drive";
+                    request.Fields = "nextPageToken, files(id)";
+                    request.PageSize = 1000;
+                    request.PageToken = pageToken;
+
+                    var response = await invocable.ExecuteWithErrorHandlingAsync(() => request.ExecuteAsync());
+
+                    if (response.Files != null)
+                    {
+                        foreach (var folder in response.Files.Where(folder => discoveredFolderIds.Add(folder.Id)))
+                        {
+                            allFolderIds.Add(folder.Id);
+                            nextLevelFolderIds.Add(folder.Id);
+                        }
+                    }
+
+                    pageToken = response.NextPageToken;
+                } while (!string.IsNullOrEmpty(pageToken));
             }
+
+            currentLevelFolderIds = nextLevelFolderIds;
+            currentLevel++;
         }
+
         return allFolderIds;
     }
+
+    private static string EscapeDriveQueryValue(string value) => value.Replace("\\", "\\\\").Replace("'", "\\'");
 }

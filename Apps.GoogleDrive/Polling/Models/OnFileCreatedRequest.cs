@@ -15,8 +15,8 @@ public class OnFileCreatedRequest
     [Display("Include subfolders?")]
     public bool? IncludeSubfolders { get; set; }
 
-    [Display("Max subfolder level to search")]
-    public double? MaxSubfolderLevel { get; set; }
+    [Display("Max subfolder level to search", Description = "Defaults to 2 when subfolders are included")]
+    public double? MaxSubfolderLevel { get; set; } = 2;
 
     [Display("File name contains", Description = "Return only files where name contains this text")]
     public string? FileNameContains { get; set; }

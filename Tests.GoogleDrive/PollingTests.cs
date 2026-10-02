@@ -14,7 +14,7 @@ public class PollingTests : TestBase
     {
         var polling = new PollingList(InvocationContext);
 
-        var lastInteraction = DateTime.UtcNow.AddHours(-2);
+        var lastInteraction = DateTime.UtcNow.AddHours(-72);
         var memory = new DateMemory { LastInteractionDate = lastInteraction };
 
         var pollingRequest = new PollingEventRequest<DateMemory>
@@ -25,9 +25,9 @@ public class PollingTests : TestBase
 
         var filter = new OnFileCreatedRequest
         {
-            FolderId = "1ZgCDIk5R2IDhe2i5uEKeWPROHSnKAj8z",
+            FolderId = "1QuPZRXxOZ-tC0QYidvLLJBWFvfS3Tnnb",
             IncludeSubfolders = true,
-            MaxSubfolderLevel = 2
+            MaxSubfolderLevel = 3
         };
 
         var result = await polling.OnFileCreated(pollingRequest, filter);
