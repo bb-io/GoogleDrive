@@ -293,7 +293,7 @@ public class StorageActions : DriveInvocable
         Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest,
         Google.Apis.Drive.v3.Data.File fileMetadata)
     {
-        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
+        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media&supportsAllDrives=true";
         var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value
             ?? throw new PluginApplicationException("Can't create a download request.");
 
