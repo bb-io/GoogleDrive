@@ -275,7 +275,7 @@ public class StorageActions : DriveInvocable
             throw new PluginMisconfigurationException($"The file {fileMetadata.Name} has type {fileMetadata.MimeType}, which has no defined conversion");
 
         var exportRequest = ExecuteWithErrorHandling(() => Client.Files.Export(fileMetadata.Id, exportMime));
-        var fileName = fileMetadata.Name + _extensionMap[fileMetadata.MimeType];
+        var fileName = SanitizeFileName(fileMetadata.Name + _extensionMap[fileMetadata.MimeType]);
 
         // Exports are limited to 10MB, so it's safe to use a MemoryStream here
         using var stream = new MemoryStream();
@@ -293,7 +293,7 @@ public class StorageActions : DriveInvocable
         Google.Apis.Drive.v3.FilesResource.GetRequest fileRequest,
         Google.Apis.Drive.v3.Data.File fileMetadata)
     {
-        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media";
+        var fileUrl = $"https://www.googleapis.com/drive/v3/files/{fileRequest.FileId}?alt=media&supportsAllDrives=true";
         var token = InvocationContext.AuthenticationCredentialsProviders.FirstOrDefault(p => p.KeyName == "access_token")?.Value
             ?? throw new PluginApplicationException("Can't create a download request.");
 
@@ -302,7 +302,10 @@ public class StorageActions : DriveInvocable
 
         return Task.FromResult(new FileModel
         {
-            File = new FileReference(downloadRequest, fileMetadata.Name, fileMetadata.MimeType),
+            File = new FileReference(downloadRequest, SanitizeFileName(fileMetadata.Name), fileMetadata.MimeType),
         });
     }
+
+    private static string SanitizeFileName(string fileName) =>
+        fileName.Replace('/', '_').Replace('\\', '_');
 }
