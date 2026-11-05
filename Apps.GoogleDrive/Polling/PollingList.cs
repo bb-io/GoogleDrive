@@ -7,6 +7,7 @@ using Apps.GoogleDrive.Utils;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Blackbird.Applications.SDK.Blueprints;
+using System.Diagnostics;
 using File = Google.Apis.Drive.v3.Data.File;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -28,8 +29,12 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnFileCreatedRequest filter)
     {
-        if (request.Memory is null) return CreateEmptyResponse();
+        var pollingStartedAt = DateTime.UtcNow;
+        InvocationContext.Logger?.LogInformation($"Polling started at {pollingStartedAt:O}", null);
 
+        if (request.Memory is null) return CreateEmptyResponse(pollingStartedAt);
+
+        var stopwatch = Stopwatch.StartNew();
         var items = await GetFilesWithSubfoldersAsync(
             request.Memory.LastInteractionDate,
             filter.FolderId,
@@ -37,10 +42,19 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             filter.MaxSubfolderLevel,
             filter.FileNameContains,
             filter.MimeType,
-            "createdTime"
+            "createdTime",
+            pollingStartedAt
         );
 
-        return items.Count != 0 ? CreateSuccessResponse(items) : CreateEmptyResponse();
+        InvocationContext.Logger?.LogInformation(
+            "OnFileCreated polling: Memory=" + request.Memory.LastInteractionDate.ToString("O")
+            + ", Matched=" + items.Count
+            + ", DurationMs=" + stopwatch.ElapsedMilliseconds,
+            null);
+
+        return items.Count != 0
+            ? CreateSuccessResponse(items, pollingStartedAt)
+            : CreateEmptyResponse(pollingStartedAt);
     }
 
     [PollingEvent("On files updated", "On files updated in a specified folder")]
@@ -119,7 +133,8 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         double? maxLevel, 
         string? fileNameContains, 
         string? mimeTypeFilter, 
-        string dateField)
+        string dateField,
+        DateTime? lastInteractionUpperBound = null)
     {
         var folderIds = new List<string>();
 
@@ -152,11 +167,14 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         }
 
         var lastInteractionUtc = lastInteractionDate.ToUniversalTime();
+        var lastInteractionUpperBoundUtc = lastInteractionUpperBound?.ToUniversalTime();
 
         return files
             .DistinctBy(file => file.Id)
             .Where(file => file.MimeType != "application/vnd.google-apps.folder")
-            .Where(file => GetDateValue(file, dateField) > lastInteractionUtc)
+            .Where(file => GetDateValue(file, dateField) is { } dateValue
+                && dateValue > lastInteractionUtc
+                && (lastInteractionUpperBoundUtc is null || dateValue <= lastInteractionUpperBoundUtc.Value))
             .Where(file => string.IsNullOrWhiteSpace(fileNameContains)
                 || file.Name.Contains(fileNameContains.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(file => string.IsNullOrWhiteSpace(mimeTypeFilter)
@@ -188,7 +206,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             request.SupportsAllDrives = true;
             request.Spaces = "drive";
             request.Fields = "nextPageToken, files(id, name, parents, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
-            request.PageSize = 100;
+            request.PageSize = 1000;
             request.PageToken = pageToken;
             request.Q = query;
 
@@ -229,13 +247,16 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         return allFiles;
     }
 
-    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateEmptyResponse() => new()
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateEmptyResponse(
+        DateTime? lastInteractionDate = null) => new()
     {
         FlyBird = false,
-        Memory = new() { LastInteractionDate = DateTime.UtcNow }
+        Memory = new() { LastInteractionDate = lastInteractionDate ?? DateTime.UtcNow }
     };
 
-    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateSuccessResponse(IEnumerable<File> items)
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateSuccessResponse(
+        IEnumerable<File> items,
+        DateTime? lastInteractionDate = null)
     {
         var fileArray = items.ToArray();
         return new()
@@ -246,7 +267,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
                 Files = fileArray.Select(x => new FileInfo(x)).ToList(),
                 TotalCount = fileArray.Length
             },
-            Memory = new() { LastInteractionDate = DateTime.UtcNow }
+            Memory = new() { LastInteractionDate = lastInteractionDate ?? DateTime.UtcNow }
         };
     }
 }

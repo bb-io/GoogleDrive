@@ -25,9 +25,9 @@ public class PollingTests : TestBase
 
         var filter = new OnFileCreatedRequest
         {
-            FolderId = "1QuPZRXxOZ-tC0QYidvLLJBWFvfS3Tnnb",
+            FolderId = "10Ugy3Y7-kSXNtxFhnESuVpg89WTGl8wB",
             IncludeSubfolders = true,
-            MaxSubfolderLevel = 3
+            MaxSubfolderLevel = 4
         };
 
         var result = await polling.OnFileCreated(pollingRequest, filter);
