@@ -7,6 +7,7 @@ using Apps.GoogleDrive.Utils;
 using Blackbird.Applications.Sdk.Common.Invocation;
 using Blackbird.Applications.Sdk.Common.Polling;
 using Blackbird.Applications.SDK.Blueprints;
+using System.Diagnostics;
 using File = Google.Apis.Drive.v3.Data.File;
 using FileInfo = Apps.GoogleDrive.Models.Storage.Responses.FileInfo;
 
@@ -28,8 +29,11 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnFileCreatedRequest filter)
     {
+         InvocationContext.Logger?.LogInformation($"Polling started at {DateTime.UtcNow:O}", null);
+
         if (request.Memory is null) return CreateEmptyResponse();
 
+        var stopwatch = Stopwatch.StartNew();
         var items = await GetFilesWithSubfoldersAsync(
             request.Memory.LastInteractionDate,
             filter.FolderId,
@@ -39,6 +43,12 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             filter.MimeType,
             "createdTime"
         );
+
+        InvocationContext.Logger?.LogInformation(
+            "OnFileCreated polling: Memory=" + request.Memory.LastInteractionDate.ToString("O")
+            + ", Matched=" + items.Count
+            + ", DurationMs=" + stopwatch.ElapsedMilliseconds,
+            null);
 
         return items.Count != 0 ? CreateSuccessResponse(items) : CreateEmptyResponse();
     }
@@ -188,7 +198,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             request.SupportsAllDrives = true;
             request.Spaces = "drive";
             request.Fields = "nextPageToken, files(id, name, parents, createdTime, trashedTime, trashed, modifiedTime, mimeType, size)";
-            request.PageSize = 100;
+            request.PageSize = 1000;
             request.PageToken = pageToken;
             request.Q = query;
 
