@@ -29,9 +29,10 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         PollingEventRequest<DateMemory> request,
         [PollingEventParameter] OnFileCreatedRequest filter)
     {
-         InvocationContext.Logger?.LogInformation($"Polling started at {DateTime.UtcNow:O}", null);
+        var pollingStartedAt = DateTime.UtcNow;
+        InvocationContext.Logger?.LogInformation($"Polling started at {pollingStartedAt:O}", null);
 
-        if (request.Memory is null) return CreateEmptyResponse();
+        if (request.Memory is null) return CreateEmptyResponse(pollingStartedAt);
 
         var stopwatch = Stopwatch.StartNew();
         var items = await GetFilesWithSubfoldersAsync(
@@ -41,7 +42,8 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             filter.MaxSubfolderLevel,
             filter.FileNameContains,
             filter.MimeType,
-            "createdTime"
+            "createdTime",
+            pollingStartedAt
         );
 
         InvocationContext.Logger?.LogInformation(
@@ -50,7 +52,9 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
             + ", DurationMs=" + stopwatch.ElapsedMilliseconds,
             null);
 
-        return items.Count != 0 ? CreateSuccessResponse(items) : CreateEmptyResponse();
+        return items.Count != 0
+            ? CreateSuccessResponse(items, pollingStartedAt)
+            : CreateEmptyResponse(pollingStartedAt);
     }
 
     [PollingEvent("On files updated", "On files updated in a specified folder")]
@@ -129,7 +133,8 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         double? maxLevel, 
         string? fileNameContains, 
         string? mimeTypeFilter, 
-        string dateField)
+        string dateField,
+        DateTime? lastInteractionUpperBound = null)
     {
         var folderIds = new List<string>();
 
@@ -162,11 +167,14 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         }
 
         var lastInteractionUtc = lastInteractionDate.ToUniversalTime();
+        var lastInteractionUpperBoundUtc = lastInteractionUpperBound?.ToUniversalTime();
 
         return files
             .DistinctBy(file => file.Id)
             .Where(file => file.MimeType != "application/vnd.google-apps.folder")
-            .Where(file => GetDateValue(file, dateField) > lastInteractionUtc)
+            .Where(file => GetDateValue(file, dateField) is { } dateValue
+                && dateValue > lastInteractionUtc
+                && (lastInteractionUpperBoundUtc is null || dateValue <= lastInteractionUpperBoundUtc.Value))
             .Where(file => string.IsNullOrWhiteSpace(fileNameContains)
                 || file.Name.Contains(fileNameContains.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(file => string.IsNullOrWhiteSpace(mimeTypeFilter)
@@ -239,13 +247,16 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
         return allFiles;
     }
 
-    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateEmptyResponse() => new()
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateEmptyResponse(
+        DateTime? lastInteractionDate = null) => new()
     {
         FlyBird = false,
-        Memory = new() { LastInteractionDate = DateTime.UtcNow }
+        Memory = new() { LastInteractionDate = lastInteractionDate ?? DateTime.UtcNow }
     };
 
-    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateSuccessResponse(IEnumerable<File> items)
+    private static PollingEventResponse<DateMemory, SearchFilesResponse> CreateSuccessResponse(
+        IEnumerable<File> items,
+        DateTime? lastInteractionDate = null)
     {
         var fileArray = items.ToArray();
         return new()
@@ -256,7 +267,7 @@ public class PollingList(InvocationContext invocationContext) : DriveInvocable(i
                 Files = fileArray.Select(x => new FileInfo(x)).ToList(),
                 TotalCount = fileArray.Length
             },
-            Memory = new() { LastInteractionDate = DateTime.UtcNow }
+            Memory = new() { LastInteractionDate = lastInteractionDate ?? DateTime.UtcNow }
         };
     }
 }
